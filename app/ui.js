@@ -276,7 +276,19 @@ function downloadReport(){
 }
 
 let chartResizeHandler=null;
-function scheduleChartResize(){requestAnimationFrame(()=>requestAnimationFrame(()=>{charts.forEach(c=>{try{c.resize();}catch(e){}});}));}
+function isMobileView(){return window.innerWidth<760;}
+function scheduleChartResize(){
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    charts.forEach(c=>{try{c.resize();}catch(e){}});
+    setTimeout(()=>charts.forEach(c=>{try{c.resize();}catch(e){}}),120);
+  }));
+}
+function bindChartResize(){
+  if(chartResizeHandler)window.removeEventListener("resize",chartResizeHandler);
+  chartResizeHandler=()=>scheduleChartResize();
+  window.addEventListener("resize",chartResizeHandler);
+  if(window.visualViewport)window.visualViewport.addEventListener("resize",chartResizeHandler);
+}
 
 function kpiCard(t,v,cls,s){return `<div class=kpi><div class=t>${t}</div><div class="v ${cls}">${v}</div><div class=s>${s}</div></div>`;}
 
@@ -338,25 +350,25 @@ function renderReport(R){
     <div class=score-txt><h2>整体评价：${m.grade}</h2><p>区间净${m.total_pnl>=0?"盈利":"亏损"} ${yuan2(m.total_pnl)}。下方为按你的交易风格生成的逐项诊断与整改建议,所有数字均由系统对交割单确定性计算得出。</p></div></div>
   <div class=grid>${cards.map(c=>kpiCard(...c)).join("")}</div>
   <h2 class=sec>行为画像</h2>
-  <div class=charts><div class=panel><h4>持有周期分布(笔数)</h4><div class=chart-box><canvas id=holdChart></canvas></div></div>
+  <div class=charts><div class=panel><h4>持有周期分布(笔数)</h4><p class=sub>${Object.entries(m.buckets).map(([k,v])=>k+" "+v+"笔").join(" · ")}</p><div class="chart-box tall"><canvas id=holdChart></canvas></div></div>
     <div class=panel><h4>月度净盈亏(元)</h4><div class=chart-box><canvas id=monthChart></canvas></div></div></div>
   <div class=charts style=margin-top:16px><div class=panel><h4>盈利单 vs 亏损单 · 平均持有天数</h4><div class="chart-box sm"><canvas id=deChart></canvas></div></div>
-    <div class=panel><h4>盈亏金额结构(元)</h4><div class="chart-box sm"><canvas id=pnlChart></canvas></div></div></div>
+    <div class=panel><h4>盈亏金额结构(元)</h4><div class="chart-box tall"><canvas id=pnlChart></canvas></div></div></div>
   ${dabpHtml}
   <h2 class=sec>问题诊断与整改建议</h2>${aiHtml}${probHtml}
   <h2 class=sec>整改清单(可逐项打勾)</h2><div class=checklist>${checkHtml}</div>
   ${R.ai&&R.ai.disclaimer?`<div class=disc>${R.ai.disclaimer}</div>`:""}
   <div class=foot>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
   document.body.classList.add("report-mode");
+  $("#report").style.display="block";
+  $("#report").style.height="auto";
   initCharts(m,d);
   scheduleChartResize();
-  if(chartResizeHandler)window.removeEventListener("resize",chartResizeHandler);
-  chartResizeHandler=()=>scheduleChartResize();
-  window.addEventListener("resize",chartResizeHandler);
+  bindChartResize();
 }
 function initCharts(m,d){
   const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"};
-  const mobile=window.innerWidth<760;
+  const mobile=isMobileView();
   Chart.defaults.font.family="Microsoft YaHei, PingFang SC, sans-serif";
   Chart.defaults.animation=false;
   Chart.defaults.responsive=true;
@@ -373,7 +385,8 @@ function initCharts(m,d){
   mk("holdChart",{type:"doughnut",
     data:{labels:Object.keys(m.buckets),datasets:[{data:Object.values(m.buckets),
       backgroundColor:["#9bd2b0","#7cc49a","#f0c36b","#e89a5a","#d83a3a"],borderWidth:2,borderColor:"#fff"}]},
-    options:{cutout:"56%",plugins:{legend:{position:mobile?"bottom":"right",labels:{boxWidth:10,padding:6,font:{size:mobile?10:11}}}}}});
+    options:{cutout:mobile?"52%":"56%",layout:{padding:mobile?6:0},
+      plugins:{legend:{display:!mobile,position:"right",labels:{boxWidth:10,padding:6,font:{size:11}}}}}});
 
   // 月度盈亏 → 折线+面积(单月份也不会出现超宽柱)
   const mo=Object.keys(m.monthly),mv=Object.values(m.monthly);
@@ -395,13 +408,23 @@ function initCharts(m,d){
       scales:{x:{grid:{color:"#eef2f7"},ticks:{font:{size:mobile?10:11}}},y:{grid:{display:false}}},
       datasets:{bar:{...barMobile,maxBarThickness:mobile?24:32}}}});
 
-  // 盈亏结构 → 极区图(三指标对比,避免第三根柱重复语义)
-  mk("pnlChart",{type:"polarArea",
-    data:{labels:["总盈利","总亏损","净盈亏"],
-      datasets:[{data:[Math.abs(m.gross_profit),Math.abs(m.gross_loss),Math.abs(m.total_pnl)],
-        backgroundColor:["rgba(216,58,58,.75)","rgba(23,138,90,.75)","rgba(217,138,0,.75)"],borderWidth:1,borderColor:"#fff"}]},
-    options:{plugins:{legend:{position:mobile?"bottom":"top",labels:{boxWidth:10,padding:6,font:{size:mobile?10:11}}}},
-      scales:{r:{grid:{color:"#eef2f7"},ticks:{display:false}}}}});
+  // 盈亏结构 → 移动端改横向柱(极区图+图例易溢出);桌面端极区图
+  if(mobile){
+    mk("pnlChart",{type:"bar",
+      data:{labels:["总盈利","总亏损","净盈亏"],
+        datasets:[{data:[m.gross_profit,-Math.abs(m.gross_loss),m.total_pnl],
+          backgroundColor:[G.pos,G.neg,m.total_pnl>=0?G.warn:G.neg]}]},
+      options:{indexAxis:"y",plugins:{legend:{display:false}},
+        scales:{x:{grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:10}}},y:{grid:{display:false}}},
+        datasets:{bar:{maxBarThickness:28,borderRadius:6}}}});
+  }else{
+    mk("pnlChart",{type:"polarArea",
+      data:{labels:["总盈利","总亏损","净盈亏"],
+        datasets:[{data:[Math.abs(m.gross_profit),Math.abs(m.gross_loss),Math.abs(m.total_pnl)],
+          backgroundColor:["rgba(216,58,58,.75)","rgba(23,138,90,.75)","rgba(217,138,0,.75)"],borderWidth:1,borderColor:"#fff"}]},
+      options:{plugins:{legend:{position:"top",labels:{boxWidth:10,padding:6,font:{size:11}}}},
+        scales:{r:{grid:{color:"#eef2f7"},ticks:{display:false}}}}});
+  }
 
   if(d){
     const bk=["首板","二板","三板","四板+"].filter(b=>d.board_stats[b]);

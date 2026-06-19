@@ -28,7 +28,12 @@ CSS = """
 /* A 股惯例:盈利(--pos)红、亏损(--neg)绿。下方非 P&L 用途的红/绿用硬编码避免被翻转 */
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{margin:0;background:linear-gradient(165deg,#e8eef6 0%,var(--bg) 45%,#f5f7fb 100%);background-attachment:fixed;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{margin:0;background:linear-gradient(165deg,#e8eef6 0%,var(--bg) 45%,#f5f7fb 100%);background-attachment:scroll;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+html{height:auto}
+#report{display:none;overflow:visible;height:auto;min-height:0}
+body.report-mode{overflow-y:auto;height:auto;min-height:100%}
+body.report-mode #upload{display:none!important}
+body.report-mode #report{display:block!important;height:auto!important;overflow:visible!important;padding-bottom:max(72px,env(safe-area-inset-bottom))}
 .wrap{max-width:980px;margin:0 auto;padding:26px 20px 60px;width:100%;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:max(60px,env(safe-area-inset-bottom))}
 /* 上传页 */
 .home{padding-top:4px}
@@ -107,13 +112,19 @@ h2.sec{font-size:18px;margin:26px 0 13px;padding-left:11px;border-left:4px solid
 .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;min-width:0}
 .panel h4{margin:0 0 4px;font-size:14px}.panel .sub{margin:0 0 10px;font-size:12px;color:var(--mut)}
-.chart-box{position:relative;width:100%;height:200px;margin-top:4px;overflow:hidden}
-.chart-box.sm{height:170px}
-.chart-box.lg{height:220px}
+.chart-box{position:relative;width:100%;height:220px;margin-top:4px;overflow:visible}
+.chart-box.sm{height:190px}
+.chart-box.lg{height:240px}
 .chart-box canvas{display:block!important;width:100%!important;height:100%!important;max-width:none!important}
 .report-summary{display:none;margin:0 0 14px;padding:10px 14px;background:#f8fbff;border:1px solid #d7e6f6;border-radius:10px;font-size:12px;color:#4a6078;line-height:1.55;text-align:center}
-body.report-mode #upload{display:none!important;visibility:hidden;height:0;overflow:hidden;margin:0;padding:0}
-@media(max-width:760px){.chart-box{height:185px}.chart-box.lg{height:200px}.report-summary{display:block}}
+@media(max-width:760px){
+.chart-box{height:280px;min-height:280px}
+.chart-box.sm{height:240px;min-height:240px}
+.chart-box.lg{height:300px;min-height:300px}
+.chart-box.tall{height:320px;min-height:320px}
+.panel{overflow:visible}
+.report-summary{display:block}
+}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px}
 table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px}
 .problem{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--mut);border-radius:12px;margin-bottom:13px;overflow:hidden}
