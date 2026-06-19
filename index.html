@@ -1,9 +1,10 @@
-<!DOCTYPE html><html lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width, initial-scale=1"><title>TradeCheck · 交易诊断助手</title><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><style>
+<!DOCTYPE html><html lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width, initial-scale=1, viewport-fit=cover"><title>TradeCheck · 交易诊断助手</title><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><style>
 :root{--bg:#f5f7fb;--card:#fff;--ink:#1f2733;--mut:#7a8699;--line:#e6ebf2;--pos:#d83a3a;--neg:#178a5a;--warn:#d98a00;--accent:#1f4e79;--accent2:#2e75b6;}
 /* A 股惯例:盈利(--pos)红、亏损(--neg)绿。下方非 P&L 用途的红/绿用硬编码避免被翻转 */
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6}
-.wrap{max-width:980px;margin:0 auto;padding:26px 20px 60px}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{max-width:980px;margin:0 auto;padding:26px 20px 60px;width:100%;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:max(60px,env(safe-area-inset-bottom))}
 /* 上传页 */
 .up-hero{text-align:center;padding:40px 0 10px}
 .up-hero .logo{display:inline-flex;align-items:center;gap:10px;color:var(--accent);font-weight:800;font-size:18px}
@@ -31,7 +32,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei
 .actions{text-align:center;margin-top:20px}
 .btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 34px;font-size:15px;font-weight:700;cursor:pointer}
 .btn:disabled{background:#b9c3d2;cursor:not-allowed}
-.btn-ghost{background:#fff;color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;margin-left:8px}
+.btn-ghost{background:#fff;color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;margin-left:0}
 .demo{display:block;margin:14px auto 0;color:var(--accent2);background:none;border:0;cursor:pointer;font-size:13.5px;text-decoration:underline}
 .err{color:#d83a3a;text-align:center;margin-top:14px;font-size:14px;min-height:20px}
 .privacy{margin:22px auto 0;max-width:620px;background:#eef5fc;border:1px solid #d7e6f6;border-radius:12px;padding:14px 18px;color:#33506e;font-size:13px;text-align:center}
@@ -39,7 +40,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei
 .feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
 .feat h4{margin:0 0 6px;font-size:14px;color:var(--accent)}.feat p{margin:0;color:var(--mut);font-size:12.5px}
 /* 报告 */
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:12px;flex-wrap:wrap}
+.topbar>div:last-child{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .brand{display:flex;align-items:center;gap:9px;color:var(--accent);font-weight:700;font-size:15px}
 .brand .dot{width:10px;height:10px;border-radius:3px;background:var(--accent2)}
 header.hero{background:linear-gradient(135deg,#1f4e79,#2e75b6);color:#fff;border-radius:16px;padding:22px 26px;margin:12px 0 16px}
@@ -58,8 +60,11 @@ header.hero h1{margin:6px 0 4px;font-size:24px}header.hero .meta{opacity:.92;fon
 .pos{color:var(--pos)}.neg{color:var(--neg)}.warn{color:var(--warn)}.muted{color:var(--mut)}
 h2.sec{font-size:18px;margin:26px 0 13px;padding-left:11px;border-left:4px solid var(--accent2)}
 .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;min-width:0}
 .panel h4{margin:0 0 4px;font-size:14px}.panel .sub{margin:0 0 10px;font-size:12px;color:var(--mut)}
+.panel canvas{display:block;max-width:100%;height:auto!important}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px}
 .problem{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--mut);border-radius:12px;margin-bottom:13px;overflow:hidden}
 .problem.sev-critical{border-left-color:#d83a3a}.problem.sev-high{border-left-color:var(--warn)}.problem.sev-medium{border-left-color:var(--accent2)}
 .p-head{display:flex;align-items:center;gap:12px;padding:13px 18px;background:#fafbfd;border-bottom:1px solid var(--line)}
@@ -69,13 +74,60 @@ h2.sec{font-size:18px;margin:26px 0 13px;padding-left:11px;border-left:4px solid
 .p-body{padding:12px 18px}.p-row{display:flex;gap:14px;padding:7px 0;align-items:flex-start}
 .p-row+.p-row{border-top:1px dashed var(--line)}
 .lab{flex:none;width:72px;font-size:12px;color:#fff;background:var(--accent);border-radius:6px;text-align:center;padding:3px 0;margin-top:2px}
-.p-row p{margin:0;font-size:13.5px}.p-row ul{margin:0;padding-left:18px;font-size:13.5px}.p-row li{margin-bottom:4px}
-table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line)}
+.p-row p{margin:0;font-size:13.5px;word-break:break-word}.p-row ul{margin:0;padding-left:18px;font-size:13.5px}.p-row li{margin-bottom:4px}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line)}
 th{color:var(--mut);font-weight:600;font-size:11.5px}.code{color:var(--mut);font-size:11px}
 .checklist{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ck{display:flex;align-items:center;gap:9px;font-size:13.5px}.ck input{width:16px;height:16px;accent-color:var(--accent2)}
 .foot{margin-top:26px;color:var(--mut);font-size:12px;text-align:center;line-height:1.7}
-@media(max-width:760px){.zones,.cols,.grid,.kpi-row,.charts,.checklist{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}.scorewrap{flex-direction:column;text-align:center}}
+@media(max-width:760px){
+.wrap{padding:16px max(14px,env(safe-area-inset-right)) max(48px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+.up-hero{padding:24px 0 8px}
+.up-hero h1{font-size:22px;line-height:1.35}
+.up-hero p{font-size:14px;padding:0 2px}
+.up-hero .logo{font-size:16px}
+.zones,.cols,.charts,.checklist{grid-template-columns:1fr}
+.grid{grid-template-columns:repeat(2,1fr);gap:8px}
+.kpi-row{grid-template-columns:repeat(2,1fr);gap:8px}
+.scorewrap{flex-direction:column;text-align:center;padding:16px 14px;gap:14px}
+.gauge{width:min(200px,100%)}
+.score-txt h2{font-size:17px}
+.score-txt p{font-size:13px}
+header.hero{padding:18px 16px;border-radius:12px;margin:8px 0 14px}
+header.hero h1{font-size:20px;line-height:1.3}
+header.hero .meta{font-size:12px;line-height:1.55}
+.idtag{font-size:11px;line-height:1.45;flex-wrap:wrap;justify-content:center;text-align:center;max-width:100%}
+.idbox{padding:12px 14px;font-size:12.5px;line-height:1.55}
+h2.sec{font-size:16px;margin:20px 0 10px}
+.topbar{flex-direction:column;align-items:stretch}
+.topbar>div:last-child{justify-content:stretch}
+.topbar .btn-ghost{flex:1 1 calc(50% - 4px);text-align:center;padding:10px 8px;font-size:12px;min-height:40px}
+.p-head{flex-wrap:wrap;padding:12px 14px;gap:8px}
+.p-head h3{font-size:14px;line-height:1.45;flex:1 1 100%}
+.p-body{padding:10px 14px}
+.p-row{flex-direction:column;gap:6px;padding:8px 0}
+.lab{width:auto;align-self:flex-start;padding:4px 10px;font-size:11px}
+.panel{padding:12px 14px}
+.panel h4{font-size:13.5px}
+table{min-width:520px;font-size:11.5px}
+th,td{padding:6px 8px}
+.kpi{padding:10px 11px}
+.kpi .v{font-size:16px}
+.kpi .t,.kpi .s{font-size:11px}
+.btn{display:block;width:100%;max-width:360px;margin:0 auto;padding:14px 20px;font-size:16px}
+.demo{font-size:13px;padding:0 8px;line-height:1.5}
+.privacy{font-size:12px;padding:12px 14px;text-align:left;line-height:1.6}
+.be{font-size:12px;padding:8px 10px;line-height:1.5}
+.zone{padding:22px 16px}
+.aibox{padding:12px 14px;font-size:13px}
+.thumb{width:56px;height:56px}
+.thumb .x{width:22px;height:22px;line-height:22px;font-size:12px}
+}
+@media(max-width:420px){
+.grid,.kpi-row{grid-template-columns:1fr}
+.topbar .btn-ghost{flex:1 1 100%}
+.up-hero h1{font-size:20px}
+}
 @media print{.topbar{display:none}body{background:#fff}}
 /* 多图 + 后端状态 + AI */
 .be{margin:14px auto 0;max-width:760px;text-align:center;font-size:12.5px;border-radius:8px;padding:8px 12px}
@@ -812,8 +864,8 @@ function renderReport(R){
       ${kpiCard("次日高开率",d.high_open_rate+"%",d.high_open_rate>=40?"pos":"neg","接力成功前提")}
       ${kpiCard("次日水下率",d.underwater_rate+"%","neg","买在情绪高点")}
       ${kpiCard("核按钮执行率",d.cut_rate+"%",d.cut_rate>=50?"pos":"neg",`水下${d.n_underwater}笔仅${d.n_cut}笔止损`)}</div>
-    <div class=charts style=margin-top:16px><div class=panel><h4 class=neg>亏损最重的接力</h4><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${wr}</table></div>
-      <div class=panel><h4 class=pos>盈利最好的接力</h4><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${br}</table></div></div>`;}
+    <div class=charts style=margin-top:16px><div class=panel><h4 class=neg>亏损最重的接力</h4><div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${wr}</table></div></div>
+      <div class=panel><h4 class=pos>盈利最好的接力</h4><div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${br}</table></div></div></div>`;}
 
   $("#report").innerHTML=`
   <div class=topbar><div class=brand><span class=dot></span>TradeCheck · 交易诊断助手</div>

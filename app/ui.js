@@ -242,8 +242,8 @@ function renderReport(R){
       ${kpiCard("次日高开率",d.high_open_rate+"%",d.high_open_rate>=40?"pos":"neg","接力成功前提")}
       ${kpiCard("次日水下率",d.underwater_rate+"%","neg","买在情绪高点")}
       ${kpiCard("核按钮执行率",d.cut_rate+"%",d.cut_rate>=50?"pos":"neg",`水下${d.n_underwater}笔仅${d.n_cut}笔止损`)}</div>
-    <div class=charts style=margin-top:16px><div class=panel><h4 class=neg>亏损最重的接力</h4><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${wr}</table></div>
-      <div class=panel><h4 class=pos>盈利最好的接力</h4><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${br}</table></div></div>`;}
+    <div class=charts style=margin-top:16px><div class=panel><h4 class=neg>亏损最重的接力</h4><div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${wr}</table></div></div>
+      <div class=panel><h4 class=pos>盈利最好的接力</h4><div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${br}</table></div></div></div>`;}
 
   $("#report").innerHTML=`
   <div class=topbar><div class=brand><span class=dot></span>TradeCheck · 交易诊断助手</div>
