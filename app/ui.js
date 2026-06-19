@@ -304,8 +304,8 @@ function renderReport(R){
     const wr=d.worst.map(t=>`<tr><td>${t.name} <span class=code>${t.code}</span></td><td>${t.board}·${t.entry}</td><td>情绪${t.senti==null?"-":t.senti}</td><td class=neg>${t.premium}%</td><td class=neg>${t.ret}%</td><td class=neg>${yuan(t.pnl)}</td></tr>`).join("");
     const br=d.best.map(t=>`<tr><td>${t.name} <span class=code>${t.code}</span></td><td>${t.board}·${t.entry}</td><td>情绪${t.senti==null?"-":t.senti}</td><td class=pos>+${t.premium}%</td><td class=pos>+${t.ret}%</td><td class=pos>${yuan(t.pnl)}</td></tr>`).join("");
     dabpHtml=`<h2 class=sec>打板接力 · 专属画像</h2>
-    <div class=charts><div class=panel><h4>连板高度 · 分项胜率</h4><p class=sub>板越高、胜率越低则高板接力缺乏正期望</p><canvas id=boardChart height=180></canvas></div>
-      <div class=panel><h4>市场情绪周期 · 净盈亏</h4><p class=sub>退潮期 ${tide.n} 笔、胜率 ${tide.win_rate}%、${yuan(tide.pnl)}</p><canvas id=sentiChart height=180></canvas></div></div>
+    <div class=charts><div class=panel><h4>连板高度 · 分项胜率</h4><p class=sub>板越高、胜率越低则高板接力缺乏正期望</p><div class="chart-box lg"><canvas id=boardChart></canvas></div></div>
+      <div class=panel><h4>市场情绪周期 · 净盈亏</h4><p class=sub>退潮期 ${tide.n} 笔、胜率 ${tide.win_rate}%、${yuan(tide.pnl)}</p><div class="chart-box lg"><canvas id=sentiChart></canvas></div></div></div>
     <div class=kpi-row>${kpiCard("打板占比",d.db_share+"%","muted","打板/半路/低吸")}
       ${kpiCard("次日高开率",d.high_open_rate+"%",d.high_open_rate>=40?"pos":"neg","接力成功前提")}
       ${kpiCard("次日水下率",d.underwater_rate+"%","neg","买在情绪高点")}
@@ -328,10 +328,10 @@ function renderReport(R){
     <div class=score-txt><h2>整体评价：${m.grade}</h2><p>区间净${m.total_pnl>=0?"盈利":"亏损"} ${yuan2(m.total_pnl)}。下方为按你的交易风格生成的逐项诊断与整改建议,所有数字均由系统对交割单确定性计算得出。</p></div></div>
   <div class=grid>${cards.map(c=>kpiCard(...c)).join("")}</div>
   <h2 class=sec>行为画像</h2>
-  <div class=charts><div class=panel><h4>持有周期分布(笔数)</h4><canvas id=holdChart height=170></canvas></div>
-    <div class=panel><h4>月度净盈亏(元)</h4><canvas id=monthChart height=170></canvas></div></div>
-  <div class=charts style=margin-top:16px><div class=panel><h4>盈利单 vs 亏损单 · 平均持有天数</h4><canvas id=deChart height=150></canvas></div>
-    <div class=panel><h4>盈亏金额结构(元)</h4><canvas id=pnlChart height=150></canvas></div></div>
+  <div class=charts><div class=panel><h4>持有周期分布(笔数)</h4><div class=chart-box><canvas id=holdChart></canvas></div></div>
+    <div class=panel><h4>月度净盈亏(元)</h4><div class=chart-box><canvas id=monthChart></canvas></div></div></div>
+  <div class=charts style=margin-top:16px><div class=panel><h4>盈利单 vs 亏损单 · 平均持有天数</h4><div class="chart-box sm"><canvas id=deChart></canvas></div></div>
+    <div class=panel><h4>盈亏金额结构(元)</h4><div class="chart-box sm"><canvas id=pnlChart></canvas></div></div></div>
   ${dabpHtml}
   <h2 class=sec>问题诊断与整改建议</h2>${aiHtml}${probHtml}
   <h2 class=sec>整改清单(可逐项打勾)</h2><div class=checklist>${checkHtml}</div>
@@ -339,18 +339,75 @@ function renderReport(R){
   <div class=foot>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
   initCharts(m,d);
 }
-function initCharts(m,d){const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"}; /* A股:pos=红 neg=绿 */
-  Chart.defaults.font.family="Microsoft YaHei, PingFang SC, sans-serif";Chart.defaults.animation=false;
+function initCharts(m,d){
+  const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"};
+  const mobile=window.innerWidth<760;
+  Chart.defaults.font.family="Microsoft YaHei, PingFang SC, sans-serif";
+  Chart.defaults.animation=false;
+  Chart.defaults.responsive=true;
+  Chart.defaults.maintainAspectRatio=false;
   const mk=(id,cfg)=>{const el=document.getElementById(id);if(el)charts.push(new Chart(el,cfg));};
-  mk("holdChart",{type:"bar",data:{labels:Object.keys(m.buckets),datasets:[{data:Object.values(m.buckets),backgroundColor:["#9bd2b0","#7cc49a","#f0c36b","#e89a5a","#d83a3a"]}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+  const barMobile={maxBarThickness:mobile?32:48,categoryPercentage:0.62,barPercentage:0.72,borderRadius:6,borderSkipped:false};
+  const axisMobile={
+    x:{grid:{display:false},ticks:{maxRotation:mobile?40:0,autoSkip:true,maxTicksLimit:mobile?6:12,font:{size:mobile?10:11}}},
+    y:{beginAtZero:true,grid:{color:"#eef2f7"},ticks:{font:{size:mobile?10:11}}}
+  };
+  const fmtMoney=v=>(Math.abs(v)>=10000?(v/10000).toFixed(1)+"万":Math.round(v).toLocaleString());
+
+  // 持有周期 → 环形图(占比更直观)
+  mk("holdChart",{type:"doughnut",
+    data:{labels:Object.keys(m.buckets),datasets:[{data:Object.values(m.buckets),
+      backgroundColor:["#9bd2b0","#7cc49a","#f0c36b","#e89a5a","#d83a3a"],borderWidth:2,borderColor:"#fff"}]},
+    options:{cutout:"56%",plugins:{legend:{position:mobile?"bottom":"right",labels:{boxWidth:12,padding:8,font:{size:11}}}}}});
+
+  // 月度盈亏 → 折线+面积(单月份也不会出现超宽柱)
   const mo=Object.keys(m.monthly),mv=Object.values(m.monthly);
-  mk("monthChart",{type:"bar",data:{labels:mo,datasets:[{data:mv,backgroundColor:mv.map(v=>v>=0?G.pos:G.neg)}]},options:{plugins:{legend:{display:false}}}});
-  mk("deChart",{type:"bar",data:{labels:["盈利单","亏损单"],datasets:[{data:[m.avg_hold_win,m.avg_hold_loss],backgroundColor:[G.pos,G.neg]}]},options:{indexAxis:"y",plugins:{legend:{display:false}}}});
-  mk("pnlChart",{type:"bar",data:{labels:["总盈利","总亏损","净盈亏"],datasets:[{data:[m.gross_profit,m.gross_loss,m.total_pnl],backgroundColor:[G.pos,G.neg,G.warn]}]},options:{plugins:{legend:{display:false}}}});
-  if(d){const bk=["首板","二板","三板","四板+"].filter(b=>d.board_stats[b]);
-    mk("boardChart",{type:"bar",data:{labels:bk,datasets:[{data:bk.map(b=>d.board_stats[b].win_rate),backgroundColor:["#7cc49a","#f0c36b","#e8915a","#d83a3a"]}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,title:{display:true,text:"胜率%"}}}}});
+  mk("monthChart",{type:"line",
+    data:{labels:mo,datasets:[{data:mv,tension:0.35,fill:true,
+      pointRadius:mo.length<=2?7:4,pointHoverRadius:mo.length<=2?8:5,
+      pointBackgroundColor:mv.map(v=>v>=0?G.pos:G.neg),pointBorderColor:"#fff",pointBorderWidth:2,
+      segment:{borderColor:ctx=>(ctx.p1.parsed.y>=0?G.pos:G.neg),
+        backgroundColor:ctx=>(ctx.p1.parsed.y>=0?"rgba(216,58,58,.12)":"rgba(23,138,90,.12)")},
+      borderWidth:2.5}]},
+    options:{plugins:{legend:{display:false}},scales:{
+      x:{grid:{display:false},ticks:{maxRotation:mobile?40:0,font:{size:mobile?10:11}}},
+      y:{grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:mobile?10:11}}}}}});
+
+  // 处置效应 → 横向条形(两值对比)
+  mk("deChart",{type:"bar",
+    data:{labels:["盈利单","亏损单"],datasets:[{data:[m.avg_hold_win,m.avg_hold_loss],backgroundColor:[G.pos,G.neg]}]},
+    options:{indexAxis:"y",plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:"#eef2f7"},ticks:{font:{size:mobile?10:11}}},y:{grid:{display:false}}},
+      datasets:{bar:{...barMobile,maxBarThickness:mobile?24:32}}}});
+
+  // 盈亏结构 → 极区图(三指标对比,避免第三根柱重复语义)
+  mk("pnlChart",{type:"polarArea",
+    data:{labels:["总盈利","总亏损","净盈亏"],
+      datasets:[{data:[Math.abs(m.gross_profit),Math.abs(m.gross_loss),Math.abs(m.total_pnl)],
+        backgroundColor:["rgba(216,58,58,.75)","rgba(23,138,90,.75)","rgba(217,138,0,.75)"],borderWidth:1,borderColor:"#fff"}]},
+    options:{plugins:{legend:{position:mobile?"bottom":"top",labels:{boxWidth:12,font:{size:11}}}},
+      scales:{r:{grid:{color:"#eef2f7"},ticks:{display:false}}}}});
+
+  if(d){
+    const bk=["首板","二板","三板","四板+"].filter(b=>d.board_stats[b]);
+    // 连板胜率 → 折线趋势
+    mk("boardChart",{type:"line",
+      data:{labels:bk,datasets:[{data:bk.map(b=>d.board_stats[b].win_rate),tension:0.25,fill:true,
+        borderColor:G.ac,backgroundColor:"rgba(46,117,182,.1)",pointRadius:5,
+        pointBackgroundColor:["#7cc49a","#f0c36b","#e8915a","#d83a3a"],pointBorderColor:"#fff",pointBorderWidth:2,borderWidth:2.5}]},
+      options:{plugins:{legend:{display:false}},scales:{
+        x:{grid:{display:false}},y:{beginAtZero:true,max:100,grid:{color:"#eef2f7"},
+          ticks:{callback:v=>v+"%",font:{size:mobile?10:11}}}}}});
+
     const sk=["主升(情绪≥60)","中性(40-60)","退潮(情绪<40)"].filter(g=>d.senti_stats[g]);
-    mk("sentiChart",{type:"bar",data:{labels:sk.map(s=>s.split("(")[0]),datasets:[{data:sk.map(g=>d.senti_stats[g].pnl),backgroundColor:sk.map(g=>d.senti_stats[g].pnl>=0?G.pos:G.neg)}]},options:{plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:"净盈亏 元"}}}}});}
+    // 情绪周期盈亏 → 横向条形(标签长,移动端更友好)
+    mk("sentiChart",{type:"bar",
+      data:{labels:sk.map(s=>s.split("(")[0]),datasets:[{data:sk.map(g=>d.senti_stats[g].pnl),
+        backgroundColor:sk.map(g=>d.senti_stats[g].pnl>=0?G.pos:G.neg)}]},
+      options:{indexAxis:"y",plugins:{legend:{display:false}},
+        scales:{x:{grid:{color:"#eef2f7"},ticks:{callback:fmtMoney}},y:{grid:{display:false}}},
+        datasets:{bar:{...barMobile,maxBarThickness:mobile?28:36}}}});
+  }
 }
 document.addEventListener("DOMContentLoaded",()=>{
   bindCSV("dealZone","dealInput","deal");bindImg();

@@ -107,6 +107,10 @@ h2.sec{font-size:18px;margin:26px 0 13px;padding-left:11px;border-left:4px solid
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;min-width:0}
 .panel h4{margin:0 0 4px;font-size:14px}.panel .sub{margin:0 0 10px;font-size:12px;color:var(--mut)}
 .panel canvas{display:block;max-width:100%;height:auto!important}
+.chart-box{position:relative;width:100%;height:200px;margin-top:4px}
+.chart-box.sm{height:170px}
+.chart-box.lg{height:220px}
+@media(max-width:760px){.chart-box{height:185px}.chart-box.lg{height:200px}}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px}
 table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px}
 .problem{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--mut);border-radius:12px;margin-bottom:13px;overflow:hidden}
