@@ -191,7 +191,6 @@ th,td{padding:6px 8px}
 .be{font-size:12px;padding:8px 10px;line-height:1.5}
 .zone{padding:22px 16px}
 .aibox{padding:12px 14px;font-size:13px}
-.imgzone .thumbs{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 }
 @media(max-width:420px){
 #report .grid,#report .kpi-row{grid-template-columns:repeat(2,1fr)!important}
@@ -207,12 +206,12 @@ th,td{padding:6px 8px}
 .be:not(.on):not(.off){animation:bePulse 1.4s ease-in-out infinite alternate}
 @keyframes bePulse{from{opacity:.55}to{opacity:1}}
 .imgzone .thumb-strip{margin-top:10px;padding:8px;border-radius:10px;background:rgba(46,117,182,.05);border:1px solid rgba(46,117,182,.12);width:100%;box-sizing:border-box}
-.imgzone .thumbs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;width:100%;align-items:stretch}
-.thumb{position:relative;width:100%;height:52px;max-height:52px;border-radius:8px;overflow:hidden;border:1px solid #c5d4e8;background:linear-gradient(145deg,#eef4fb,#dceaf8);display:flex;align-items:center;justify-content:center;flex:none}
-.thumb-num{font-size:17px;font-weight:800;color:var(--accent2);line-height:1;user-select:none}
-.thumb .x{position:absolute;top:2px;right:2px;color:#fff;background:rgba(0,0,0,.55);border-radius:8px;width:18px;height:18px;line-height:18px;text-align:center;font-size:11px;cursor:pointer;z-index:2}
+.imgzone .thumbs{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;align-content:flex-start}
+.thumb{position:relative;-webkit-flex:0 0 52px;flex:0 0 52px;width:52px;height:52px;border-radius:8px;border:1px solid #c5d4e8;background:linear-gradient(145deg,#eef4fb,#dceaf8);display:-webkit-flex;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+.thumb-num{font-size:16px;font-weight:800;color:var(--accent2);line-height:1;user-select:none;pointer-events:none}
+.thumb .x{position:absolute;top:-4px;right:-4px;color:#fff;background:rgba(0,0,0,.6);border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;font-size:11px;cursor:pointer;z-index:2}
 .imgzone.has-imgs{padding:14px 10px 12px}
-.imgzone.has-imgs .zone-icon,.imgzone.has-imgs .hint{display:none}
+.imgzone.has-imgs .zone-icon,.imgzone.has-imgs .hint{display:none!important}
 .imgzone.has-imgs .ttl{margin-bottom:6px;font-size:14px}
 .imgcount{color:var(--mut);font-size:11.5px;margin-top:6px;line-height:1.45}
 .orsep{display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13px;font-weight:700}
