@@ -117,14 +117,7 @@ th{color:var(--mut);font-weight:600;font-size:11.5px}.code{color:var(--mut);font
       <input type=file id=imgInput accept="image/*" multiple hidden>
     </div>
   </div>
-  <div class=zones style="grid-template-columns:1fr;margin-top:14px">
-    <div class=zone id=mktZone>
-      <div class=ic>📈</div><div class=ttl>日线行情 CSV <span class=opt>可选</span></div>
-      <div class=hint>打板/接力类策略上传后,解锁连板高度/接力成功率/核按钮等专属诊断</div>
-      <div class=fname id=mktName></div>
-      <input type=file id=mktInput accept=".csv,.txt" hidden>
-    </div>
-  </div>
+  <!-- 日线行情上传区已删除:行情由后端 /api/tradecheck/build_market_csv 自动补齐,用户无需上传 -->
   <div class=actions>
     <button class=btn id=runBtn disabled>生成诊断报告</button>
     <button class=demo id=demoBtn>没有文件?用示例账户(打板接力)体验 →</button>
@@ -458,9 +451,8 @@ async function autoFetchMarket(deals){
   return {csv:j.csv,unresolved:j.unresolved||[],nRows:j.n_rows||0,nResolved:j.n_resolved||0};
 }
 
-function setCSV(which,file){const rd=new FileReader();rd.onload=()=>{const t=rd.result;
-  if(which==="deal"){fileDeal=t;$("#dealName").textContent="✓ "+file.name;$("#dealZone").classList.add("ok");}
-  else{fileMkt=t;$("#mktName").textContent="✓ "+file.name;$("#mktZone").classList.add("ok");}
+function setCSV(which,file){const rd=new FileReader();rd.onload=()=>{
+  fileDeal=rd.result;$("#dealName").textContent="✓ "+file.name;$("#dealZone").classList.add("ok");
   syncRun();};rd.readAsText(file,"utf-8");}
 function addImages(files){[...files].forEach(f=>{if(!f.type.startsWith("image/"))return;const rd=new FileReader();
   rd.onload=()=>{images.push({name:f.name,url:rd.result});renderThumbs();syncRun();};rd.readAsDataURL(f);});}
@@ -630,7 +622,7 @@ function initCharts(m,d){const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:
     mk("sentiChart",{type:"bar",data:{labels:sk.map(s=>s.split("(")[0]),datasets:[{data:sk.map(g=>d.senti_stats[g].pnl),backgroundColor:sk.map(g=>d.senti_stats[g].pnl>=0?G.pos:G.neg)}]},options:{plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:"净盈亏 元"}}}}});}
 }
 document.addEventListener("DOMContentLoaded",()=>{
-  bindCSV("dealZone","dealInput","deal");bindCSV("mktZone","mktInput","mkt");bindImg();
+  bindCSV("dealZone","dealInput","deal");bindImg();
   $("#runBtn").addEventListener("click",run);$("#demoBtn").addEventListener("click",loadDemo);
   probeBackend();
 });

@@ -144,14 +144,7 @@ UPLOAD = """
       <input type=file id=imgInput accept="image/*" multiple hidden>
     </div>
   </div>
-  <div class=zones style="grid-template-columns:1fr;margin-top:14px">
-    <div class=zone id=mktZone>
-      <div class=ic>📈</div><div class=ttl>日线行情 CSV <span class=opt>可选</span></div>
-      <div class=hint>打板/接力类策略上传后,解锁连板高度/接力成功率/核按钮等专属诊断</div>
-      <div class=fname id=mktName></div>
-      <input type=file id=mktInput accept=".csv,.txt" hidden>
-    </div>
-  </div>
+  <!-- 日线行情上传区已删除:行情由后端 /api/tradecheck/build_market_csv 自动补齐,用户无需上传 -->
   <div class=actions>
     <button class=btn id=runBtn disabled>生成诊断报告</button>
     <button class=demo id=demoBtn>没有文件?用示例账户(打板接力)体验 →</button>

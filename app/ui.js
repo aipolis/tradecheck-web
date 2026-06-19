@@ -50,9 +50,8 @@ async function autoFetchMarket(deals){
   return {csv:j.csv,unresolved:j.unresolved||[],nRows:j.n_rows||0,nResolved:j.n_resolved||0};
 }
 
-function setCSV(which,file){const rd=new FileReader();rd.onload=()=>{const t=rd.result;
-  if(which==="deal"){fileDeal=t;$("#dealName").textContent="✓ "+file.name;$("#dealZone").classList.add("ok");}
-  else{fileMkt=t;$("#mktName").textContent="✓ "+file.name;$("#mktZone").classList.add("ok");}
+function setCSV(which,file){const rd=new FileReader();rd.onload=()=>{
+  fileDeal=rd.result;$("#dealName").textContent="✓ "+file.name;$("#dealZone").classList.add("ok");
   syncRun();};rd.readAsText(file,"utf-8");}
 function addImages(files){[...files].forEach(f=>{if(!f.type.startsWith("image/"))return;const rd=new FileReader();
   rd.onload=()=>{images.push({name:f.name,url:rd.result});renderThumbs();syncRun();};rd.readAsDataURL(f);});}
@@ -222,7 +221,7 @@ function initCharts(m,d){const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:
     mk("sentiChart",{type:"bar",data:{labels:sk.map(s=>s.split("(")[0]),datasets:[{data:sk.map(g=>d.senti_stats[g].pnl),backgroundColor:sk.map(g=>d.senti_stats[g].pnl>=0?G.pos:G.neg)}]},options:{plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:"净盈亏 元"}}}}});}
 }
 document.addEventListener("DOMContentLoaded",()=>{
-  bindCSV("dealZone","dealInput","deal");bindCSV("mktZone","mktInput","mkt");bindImg();
+  bindCSV("dealZone","dealInput","deal");bindImg();
   $("#runBtn").addEventListener("click",run);$("#demoBtn").addEventListener("click",loadDemo);
   probeBackend();
 });
