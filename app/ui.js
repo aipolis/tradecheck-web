@@ -276,6 +276,9 @@ function downloadReport(){
   a.download="交易诊断报告_"+new Date().toISOString().slice(0,10)+".html";a.click();
 }
 
+let chartResizeHandler=null;
+function scheduleChartResize(){requestAnimationFrame(()=>requestAnimationFrame(()=>{charts.forEach(c=>{try{c.resize();}catch(e){}});}));}
+
 function kpiCard(t,v,cls,s){return `<div class=kpi><div class=t>${t}</div><div class="v ${cls}">${v}</div><div class=s>${s}</div></div>`;}
 
 function renderReport(R){
@@ -319,11 +322,13 @@ function renderReport(R){
     <div class=charts style=margin-top:16px><div class=panel><h4 class=neg>亏损最重的接力</h4><div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${wr}</table></div></div>
       <div class=panel><h4 class=pos>盈利最好的接力</h4><div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${br}</table></div></div></div>`;}
 
+  const nDiag=R.diagnoses.length,nChart=4+(d?2:0);
   $("#report").innerHTML=`
   <div class=topbar><div class=brand><span class=dot></span>TradeCheck · 交易诊断助手</div>
     <div><button class=btn-ghost onclick=downloadReport()>⬇ 下载报告</button>
     <button class=btn-ghost onclick=window.print()>打印 / 导出PDF</button>
     <button class=btn-ghost onclick=reset()>重新上传</button></div></div>
+  <div class=report-summary>本报告含 ${cards.length} 项核心指标 · ${nChart} 张图表${d?" · 打板专属分析":""} · ${nDiag} 条诊断，内容与电脑端一致，请向下滑动查看全部</div>
   <header class=hero><div class=meta>复盘区间 ${m.period_start} 至 ${m.period_end} · ${m.n_trades} 笔完整交易 / ${m.n_orders} 次成交 · 本地解析</div>
     <h1>交易行为诊断报告</h1><span class=idtag>● 已识别交易风格：<b>${st.label}</b> &nbsp;置信度 ${st.confidence}%</span></header>
   <div class=idbox>📌 <b>风格识别判据</b>:${st.reasons.join(";")}。系统据此采用${d?"<b>打板接力专属标尺</b>":"对应评价标尺"}进行诊断。</div>
@@ -343,7 +348,12 @@ function renderReport(R){
   <h2 class=sec>整改清单(可逐项打勾)</h2><div class=checklist>${checkHtml}</div>
   ${R.ai&&R.ai.disclaimer?`<div class=disc>${R.ai.disclaimer}</div>`:""}
   <div class=foot>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
+  document.body.classList.add("report-mode");
   initCharts(m,d);
+  scheduleChartResize();
+  if(chartResizeHandler)window.removeEventListener("resize",chartResizeHandler);
+  chartResizeHandler=()=>scheduleChartResize();
+  window.addEventListener("resize",chartResizeHandler);
 }
 function initCharts(m,d){
   const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"};
@@ -364,7 +374,7 @@ function initCharts(m,d){
   mk("holdChart",{type:"doughnut",
     data:{labels:Object.keys(m.buckets),datasets:[{data:Object.values(m.buckets),
       backgroundColor:["#9bd2b0","#7cc49a","#f0c36b","#e89a5a","#d83a3a"],borderWidth:2,borderColor:"#fff"}]},
-    options:{cutout:"56%",plugins:{legend:{position:mobile?"bottom":"right",labels:{boxWidth:12,padding:8,font:{size:11}}}}}});
+    options:{cutout:"56%",plugins:{legend:{position:mobile?"bottom":"right",labels:{boxWidth:10,padding:6,font:{size:mobile?10:11}}}}}});
 
   // 月度盈亏 → 折线+面积(单月份也不会出现超宽柱)
   const mo=Object.keys(m.monthly),mv=Object.values(m.monthly);
@@ -391,7 +401,7 @@ function initCharts(m,d){
     data:{labels:["总盈利","总亏损","净盈亏"],
       datasets:[{data:[Math.abs(m.gross_profit),Math.abs(m.gross_loss),Math.abs(m.total_pnl)],
         backgroundColor:["rgba(216,58,58,.75)","rgba(23,138,90,.75)","rgba(217,138,0,.75)"],borderWidth:1,borderColor:"#fff"}]},
-    options:{plugins:{legend:{position:mobile?"bottom":"top",labels:{boxWidth:12,font:{size:11}}}},
+    options:{plugins:{legend:{position:mobile?"bottom":"top",labels:{boxWidth:10,padding:6,font:{size:mobile?10:11}}}},
       scales:{r:{grid:{color:"#eef2f7"},ticks:{display:false}}}}});
 
   if(d){

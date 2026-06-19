@@ -107,11 +107,13 @@ h2.sec{font-size:18px;margin:26px 0 13px;padding-left:11px;border-left:4px solid
 .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;min-width:0}
 .panel h4{margin:0 0 4px;font-size:14px}.panel .sub{margin:0 0 10px;font-size:12px;color:var(--mut)}
-.panel canvas{display:block;max-width:100%;height:auto!important}
-.chart-box{position:relative;width:100%;height:200px;margin-top:4px}
+.chart-box{position:relative;width:100%;height:200px;margin-top:4px;overflow:hidden}
 .chart-box.sm{height:170px}
 .chart-box.lg{height:220px}
-@media(max-width:760px){.chart-box{height:185px}.chart-box.lg{height:200px}}
+.chart-box canvas{display:block!important;width:100%!important;height:100%!important;max-width:none!important}
+.report-summary{display:none;margin:0 0 14px;padding:10px 14px;background:#f8fbff;border:1px solid #d7e6f6;border-radius:10px;font-size:12px;color:#4a6078;line-height:1.55;text-align:center}
+body.report-mode #upload{display:none!important;visibility:hidden;height:0;overflow:hidden;margin:0;padding:0}
+@media(max-width:760px){.chart-box{height:185px}.chart-box.lg{height:200px}.report-summary{display:block}}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px}
 table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:480px}
 .problem{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--mut);border-radius:12px;margin-bottom:13px;overflow:hidden}
@@ -142,6 +144,9 @@ th{color:var(--mut);font-weight:600;font-size:11.5px}.code{color:var(--mut);font
 .sec-label{font-size:12px;margin-bottom:14px}
 .sec-label::before,.sec-label::after{width:18px;margin:0 8px}
 .zones,.cols,.charts,.checklist{grid-template-columns:1fr}
+#report .grid{grid-template-columns:repeat(2,1fr)!important;gap:8px}
+#report .kpi-row{grid-template-columns:repeat(2,1fr)!important;gap:8px}
+#report .charts{grid-template-columns:1fr}
 .grid{grid-template-columns:repeat(2,1fr);gap:8px}
 .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px}
 .scorewrap{flex-direction:column;text-align:center;padding:16px 14px;gap:14px}
@@ -181,7 +186,8 @@ th,td{padding:6px 8px}
 .imgzone .thumb-strip{padding:6px}
 }
 @media(max-width:420px){
-.grid,.kpi-row{grid-template-columns:1fr}
+#report .grid,#report .kpi-row{grid-template-columns:repeat(2,1fr)!important}
+.grid:not(#report .grid),.kpi-row:not(#report .kpi-row){grid-template-columns:1fr}
 .topbar .btn-ghost{flex:1 1 100%}
 .hero-strip h1{font-size:19px}
 }
