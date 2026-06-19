@@ -176,7 +176,7 @@ function addImages(files){[...files].forEach(f=>{if(!f.type.startsWith("image/")
   rd.onload=()=>{images.push({name:f.name,url:rd.result});renderThumbs();syncRun();};rd.readAsDataURL(f);});}
 function renderThumbs(){const w=$("#thumbs"),strip=$("#thumbStrip"),z=$("#imgZone");
   w.innerHTML=images.map((im,i)=>
-  `<div class=thumb><img src="${im.url}" alt=""><span class=idx>${i+1}</span><span class=x data-i=${i}>✕</span></div>`).join("");
+  `<div class=thumb title="${im.name.replace(/"/g,"&quot;")}"><span class=thumb-num>${i+1}</span><span class=x data-i=${i}>✕</span></div>`).join("");
   w.querySelectorAll(".x").forEach(b=>b.onclick=e=>{e.stopPropagation();images.splice(+e.target.dataset.i,1);renderThumbs();syncRun();});
   const n=images.length;
   strip.hidden=!n;
