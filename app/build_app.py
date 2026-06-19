@@ -6,10 +6,16 @@ def b64(p):return base64.b64encode(open(p,"rb").read()).decode()
 demo_deal=b64("../samples/dabp/打板_交割单.csv")
 demo_mkt=b64("../samples/dabp/打板_日线行情.csv")
 
-# 量化新手村公众号二维码:把图片放到 app/assets/gzh-qr.png 即可自动嵌入;缺失时用 SVG 占位
-_QR_PATH="assets/gzh-qr.png"
-if os.path.exists(_QR_PATH):
-    QR_IMG='<img src="data:image/png;base64,'+b64(_QR_PATH)+'" alt="量化新手村公众号">'
+# 量化新手村公众号二维码:把图片放到 app/assets/gzh-qr.{png,jpg,jpeg,webp} 即可自动嵌入
+# 缺失时用 SVG 占位提示替换
+_QR_MIME={"png":"image/png","jpg":"image/jpeg","jpeg":"image/jpeg","webp":"image/webp"}
+_qr_found=None
+for ext,mime in _QR_MIME.items():
+    p="assets/gzh-qr."+ext
+    if os.path.exists(p):
+        _qr_found=(p,mime); break
+if _qr_found:
+    QR_IMG='<img src="data:'+_qr_found[1]+';base64,'+b64(_qr_found[0])+'" alt="量化新手村公众号">'
 else:
     QR_IMG=('<svg width=110 height=110 viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">'
             '<rect width=110 height=110 fill="#f5f7fb" stroke="#c7d2e0" stroke-dasharray="4 4"/>'
