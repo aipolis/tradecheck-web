@@ -1,44 +1,63 @@
 <!DOCTYPE html><html lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width, initial-scale=1, viewport-fit=cover"><title>TradeCheck · 交易诊断助手</title><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><style>
-:root{--bg:#f5f7fb;--card:#fff;--ink:#1f2733;--mut:#7a8699;--line:#e6ebf2;--pos:#d83a3a;--neg:#178a5a;--warn:#d98a00;--accent:#1f4e79;--accent2:#2e75b6;}
+:root{--bg:#f0f4fa;--card:#fff;--ink:#1f2733;--mut:#7a8699;--line:#e6ebf2;--pos:#d83a3a;--neg:#178a5a;--warn:#d98a00;--accent:#1f4e79;--accent2:#2e75b6;--shadow:0 4px 24px rgba(31,78,121,.08);--shadow-lg:0 12px 40px rgba(31,78,121,.14);}
 /* A 股惯例:盈利(--pos)红、亏损(--neg)绿。下方非 P&L 用途的红/绿用硬编码避免被翻转 */
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{margin:0;background:linear-gradient(165deg,#e8eef6 0%,var(--bg) 45%,#f5f7fb 100%);background-attachment:fixed;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 .wrap{max-width:980px;margin:0 auto;padding:26px 20px 60px;width:100%;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:max(60px,env(safe-area-inset-bottom))}
 /* 上传页 */
-.up-hero{text-align:center;padding:40px 0 10px}
-.up-hero .logo{display:inline-flex;align-items:center;gap:10px;color:var(--accent);font-weight:800;font-size:18px}
-.up-hero .logo .dot{width:12px;height:12px;border-radius:4px;background:var(--accent2)}
-.up-hero h1{margin:18px 0 8px;font-size:30px}
-.up-hero p{margin:0;color:var(--mut);font-size:15px}
-.zones{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:26px 0 8px}
-.zone{background:var(--card);border:2px dashed #c7d2e0;border-radius:14px;padding:30px 20px;text-align:center;cursor:pointer;transition:.15s}
-.zone:hover{border-color:var(--accent2);background:#fbfdff}
-.zone.drag{border-color:var(--accent2);background:#eef5fc}
-.zone.ok{border-style:solid;border-color:#178a5a;background:#f3fbf6}
-.zone .ic{font-size:30px}
-.zone .ttl{font-weight:700;margin:8px 0 4px;font-size:15px}
-.zone .hint{color:var(--mut);font-size:12.5px}
-.zone .fname{margin-top:8px;color:#178a5a;font-size:13px;font-weight:600;word-break:break-all}
-.req{color:#d83a3a;font-size:11px}.opt{color:var(--mut);font-size:11px}
+.home{padding-top:8px}
+.up-hero{text-align:center;padding:0 0 28px}
+.hero-card{position:relative;overflow:hidden;background:linear-gradient(145deg,#1a4570 0%,#1f4e79 40%,#2e75b6 100%);color:#fff;border-radius:20px;padding:34px 28px 26px;box-shadow:var(--shadow-lg)}
+.hero-card::before{content:"";position:absolute;width:320px;height:320px;right:-100px;top:-120px;background:radial-gradient(circle,rgba(255,255,255,.14) 0%,transparent 68%);pointer-events:none}
+.hero-card::after{content:"";position:absolute;width:200px;height:200px;left:-60px;bottom:-80px;background:radial-gradient(circle,rgba(126,200,255,.15) 0%,transparent 70%);pointer-events:none}
+.hero-card>*{position:relative;z-index:1}
+.up-hero .logo{display:inline-flex;align-items:center;gap:10px;color:rgba(255,255,255,.95);font-weight:800;font-size:17px;letter-spacing:.02em}
+.up-hero .logo .dot{width:11px;height:11px;border-radius:4px;background:#8fd0ff;box-shadow:0 0 10px rgba(143,208,255,.55)}
+.hero-card h1{margin:18px 0 10px;font-size:clamp(22px,5vw,32px);font-weight:800;line-height:1.28;letter-spacing:-.02em}
+.hero-card .lead{margin:0 auto;max-width:520px;color:rgba(255,255,255,.86);font-size:15px;line-height:1.65}
+.hero-tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:18px 0 4px}
+.htag{font-size:12px;padding:5px 13px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:rgba(255,255,255,.95)}
+.home .be{margin-top:16px;max-width:420px;margin-left:auto;margin-right:auto}
+.home .be.on{background:rgba(255,255,255,.16)!important;border:1px solid rgba(255,255,255,.28)!important;color:#eafff3!important}
+.home .be.off{background:rgba(255,255,255,.1)!important;border:1px solid rgba(255,255,255,.2)!important;color:rgba(255,255,255,.85)!important}
+.sec-label{text-align:center;font-size:13px;font-weight:600;color:var(--mut);margin:0 0 14px;letter-spacing:.04em}
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 8px}
+.zone{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 20px 24px;text-align:center;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .15s;box-shadow:0 2px 12px rgba(31,39,51,.04)}
+.zone:hover{border-color:#b8d4f0;box-shadow:0 10px 28px rgba(46,117,182,.12);transform:translateY(-2px)}
+.zone.drag{border-color:var(--accent2);background:#f8fbff;box-shadow:0 10px 32px rgba(46,117,182,.16)}
+.zone.ok{border-color:#7cc49a;background:linear-gradient(180deg,#f8fdf9,#f0faf3);box-shadow:0 4px 16px rgba(23,138,90,.1)}
+.zone-icon{width:54px;height:54px;margin:0 auto 14px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:26px;line-height:1}
+.zone-icon.file{background:linear-gradient(145deg,#eef5fc,#dceaf8)}
+.zone-icon.img{background:linear-gradient(145deg,#fff8ef,#fdebd4)}
+.zone .ic{font-size:26px}
+.zone .ttl{font-weight:700;margin:0 0 6px;font-size:15px;color:var(--ink)}
+.zone .hint{color:var(--mut);font-size:12.5px;line-height:1.55}
+.zone .fname{margin-top:10px;color:#178a5a;font-size:13px;font-weight:600;word-break:break-all;padding:6px 10px;background:rgba(23,138,90,.08);border-radius:8px;display:inline-block;max-width:100%}
+.req{color:#d83a3a;font-size:11px}.opt{color:var(--mut);font-size:11px;font-weight:400}
 /* 公众号引导卡片 */
-.promo{display:flex;align-items:center;gap:18px;justify-content:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 22px;margin:18px auto 0;max-width:520px}
-.promo .qr{flex:0 0 auto;width:104px;height:104px;display:flex;align-items:center;justify-content:center;border-radius:6px;overflow:hidden;background:#fff}
+.promo{display:flex;align-items:center;gap:18px;justify-content:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 24px;margin:22px auto 0;max-width:520px;box-shadow:0 4px 20px rgba(31,39,51,.06)}
+.promo .qr{flex:0 0 auto;width:104px;height:104px;display:flex;align-items:center;justify-content:center;border-radius:12px;overflow:hidden;background:#fff;border:1px solid var(--line)}
 .promo .qr img,.promo .qr svg{width:100%;height:100%;display:block;object-fit:contain}
 .promo .txt{flex:1;color:var(--ink);font-size:14px;line-height:1.55}
-.promo .txt .ttl{font-weight:700;color:var(--accent);margin-bottom:2px}
-.promo .txt .sub{color:var(--mut);font-size:12.5px}
-@media (max-width:520px){.promo{flex-direction:column;text-align:center}}
-.actions{text-align:center;margin-top:20px}
-.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 34px;font-size:15px;font-weight:700;cursor:pointer}
-.btn:disabled{background:#b9c3d2;cursor:not-allowed}
+.promo .txt .ttl{font-weight:700;color:var(--accent);margin-bottom:4px;font-size:15px}
+.promo .txt .sub{color:var(--mut);font-size:12.5px;margin-top:4px}
+@media (max-width:520px){.promo{flex-direction:column;text-align:center;padding:16px 18px}}
+.actions{text-align:center;margin-top:24px;padding:0 4px}
+.btn{background:linear-gradient(135deg,#1a4570,#2e75b6);color:#fff;border:0;border-radius:12px;padding:14px 40px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(31,78,121,.28);transition:transform .15s,box-shadow .15s,opacity .15s;letter-spacing:.02em}
+.btn:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(31,78,121,.32)}
+.btn:not(:disabled):active{transform:translateY(0);box-shadow:0 3px 12px rgba(31,78,121,.25)}
+.btn:disabled{background:linear-gradient(135deg,#b9c3d2,#c5ced9);box-shadow:none;cursor:not-allowed;opacity:.85}
 .btn-ghost{background:#fff;color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;margin-left:0}
-.demo{display:block;margin:14px auto 0;color:var(--accent2);background:none;border:0;cursor:pointer;font-size:13.5px;text-decoration:underline}
-.err{color:#d83a3a;text-align:center;margin-top:14px;font-size:14px;min-height:20px}
-.privacy{margin:22px auto 0;max-width:620px;background:#eef5fc;border:1px solid #d7e6f6;border-radius:12px;padding:14px 18px;color:#33506e;font-size:13px;text-align:center}
-.cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:24px}
-.feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
-.feat h4{margin:0 0 6px;font-size:14px;color:var(--accent)}.feat p{margin:0;color:var(--mut);font-size:12.5px}
+.demo{display:inline-block;margin:16px auto 0;color:var(--accent2);background:rgba(46,117,182,.06);border:0;border-radius:999px;cursor:pointer;font-size:13px;padding:8px 16px;text-decoration:none;transition:background .15s}
+.demo:hover{background:rgba(46,117,182,.12)}
+.err{color:#d83a3a;text-align:center;margin-top:14px;font-size:14px;min-height:20px;padding:0 8px}
+.privacy{margin:24px auto 0;max-width:620px;background:linear-gradient(180deg,#f8fbff,#eef5fc);border:1px solid #d7e6f6;border-radius:14px;padding:16px 20px;color:#33506e;font-size:13px;text-align:left;line-height:1.65;box-shadow:0 2px 12px rgba(51,80,110,.05)}
+.cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:28px}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 16px;box-shadow:0 2px 10px rgba(31,39,51,.04);transition:box-shadow .2s,transform .15s}
+.feat:hover{box-shadow:0 8px 24px rgba(31,39,51,.08);transform:translateY(-2px)}
+.feat-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#eef5fc,#dceaf8);color:var(--accent2);font-size:12px;font-weight:800;margin-bottom:10px}
+.feat h4{margin:0 0 6px;font-size:14px;color:var(--accent);font-weight:700}.feat p{margin:0;color:var(--mut);font-size:12.5px;line-height:1.55}
 /* 报告 */
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:12px;flex-wrap:wrap}
 .topbar>div:last-child{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -82,10 +101,13 @@ th{color:var(--mut);font-weight:600;font-size:11.5px}.code{color:var(--mut);font
 .foot{margin-top:26px;color:var(--mut);font-size:12px;text-align:center;line-height:1.7}
 @media(max-width:760px){
 .wrap{padding:16px max(14px,env(safe-area-inset-right)) max(48px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
-.up-hero{padding:24px 0 8px}
-.up-hero h1{font-size:22px;line-height:1.35}
-.up-hero p{font-size:14px;padding:0 2px}
-.up-hero .logo{font-size:16px}
+.up-hero{padding:0 0 20px}
+.hero-card{padding:26px 18px 22px;border-radius:16px}
+.hero-card h1{font-size:22px}
+.hero-card .lead{font-size:14px}
+.hero-tags{gap:6px;margin:14px 0 2px}
+.htag{font-size:11px;padding:4px 10px}
+.sec-label{font-size:12px;margin-bottom:12px}
 .zones,.cols,.charts,.checklist{grid-template-columns:1fr}
 .grid{grid-template-columns:repeat(2,1fr);gap:8px}
 .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px}
@@ -130,9 +152,11 @@ th,td{padding:6px 8px}
 }
 @media print{.topbar{display:none}body{background:#fff}}
 /* 多图 + 后端状态 + AI */
-.be{margin:14px auto 0;max-width:760px;text-align:center;font-size:12.5px;border-radius:8px;padding:8px 12px}
+.be{margin:14px auto 0;max-width:760px;text-align:center;font-size:12.5px;border-radius:999px;padding:8px 16px;transition:background .3s,border-color .3s}
 .be.on{background:#f3fbf6;border:1px solid #bfe6cf;color:#1d6b45}
 .be.off{background:#fff7ed;border:1px solid #f0d9b5;color:#8a5a14}
+.be:not(.on):not(.off){animation:bePulse 1.4s ease-in-out infinite alternate}
+@keyframes bePulse{from{opacity:.55}to{opacity:1}}
 .imgzone .thumbs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
 .thumb{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
 .thumb img{width:100%;height:100%;object-fit:cover}
@@ -147,23 +171,33 @@ th,td{padding:6px 8px}
 .disc{margin-top:14px;color:var(--mut);font-size:12px;text-align:center;font-style:italic}
 .btn-busy{opacity:.8}
 </style></head><body>
-<div id=upload class=wrap>
+<div id=upload class="wrap home">
   <div class=up-hero>
-    <div class=logo><span class=dot></span>TradeCheck · 交易诊断助手</div>
-    <h1>上传交割单,生成交易诊断报告</h1>
-    <p>AI 帮你复盘交易行为:识别风格、找出问题、给出整改建议。交割单在本地解析,数据不外传。</p>
-    <div class=be id=beStatus>检测后端中…</div>
+    <div class=hero-card>
+      <div class=logo><span class=dot></span>TradeCheck · 交易诊断助手</div>
+      <h1>上传交割单，生成交易诊断报告</h1>
+      <p class=lead>AI 帮你复盘交易行为：识别风格、找出问题、给出整改建议。交割单在本地解析，数据不外传。</p>
+      <div class=hero-tags>
+        <span class=htag>🔒 本地解析</span>
+        <span class=htag>📊 确定性指标</span>
+        <span class=htag>🎯 风格感知</span>
+      </div>
+      <div class=be id=beStatus>检测后端中…</div>
+    </div>
   </div>
+  <p class=sec-label>选择上传方式</p>
   <div class=zones>
     <div class=zone id=dealZone>
-      <div class=ic>📄</div><div class=ttl>交割单 CSV / Excel</div>
-      <div class=hint>券商导出的成交记录(.csv / .xlsx / .xls)<br>含日期/代码/买卖/价格/数量,本地解析</div>
+      <div class="zone-icon file"><span class=ic>📄</span></div>
+      <div class=ttl>交割单 CSV / Excel</div>
+      <div class=hint>券商导出的成交记录（.csv / .xlsx / .xls）<br>含日期、代码、买卖、价格、数量</div>
       <div class=fname id=dealName></div>
       <input type=file id=dealInput accept=".csv,.txt,.xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
     </div>
     <div class=zone imgzone id=imgZone>
-      <div class=ic>🖼️</div><div class=ttl>交割单截图 <span class=opt>支持多张</span></div>
-      <div class=hint>手机截的交割单图片,一张拍不全可传多张<br>系统用大模型识别并按顺序拼接(需后端)</div>
+      <div class="zone-icon img"><span class=ic>🖼️</span></div>
+      <div class=ttl>交割单截图 <span class=opt>支持多张</span></div>
+      <div class=hint>手机截的交割单图片，一张拍不全可传多张<br>系统识别并按顺序拼接（需后端）</div>
       <div class=thumbs id=thumbs></div>
       <div class=imgcount id=imgCount></div>
       <input type=file id=imgInput accept="image/*" multiple hidden>
@@ -172,7 +206,7 @@ th,td{padding:6px 8px}
   <!-- 日线行情上传区已删除:行情由后端 /api/tradecheck/build_market_csv 自动补齐,用户无需上传 -->
   <div class=actions>
     <button class=btn id=runBtn disabled>生成诊断报告</button>
-    <button class=demo id=demoBtn>没有文件?用示例账户(打板接力)体验 →</button>
+    <button class=demo id=demoBtn>没有文件？用示例账户（打板接力）体验 →</button>
   </div>
   <div class=err id=err></div>
   <div class=promo>
@@ -181,11 +215,11 @@ th,td{padding:6px 8px}
       <div>获取更多散户量化复盘技巧、TradeCheck 使用案例与策略迭代笔记。</div>
       <div class=sub>扫码或在微信搜「量化新手村」</div></div>
   </div>
-  <div class=privacy>🔒 <b>隐私</b>:① CSV 交割单<b>仅在本地解析</b>,不外传;② AI 文字诊断只上传<b>已脱敏的统计指标</b>(非原始成交明细);③ 图片识别会把<b>截图发送给所配置的视觉模型</b>转写文字——介意的用户可改用 CSV。后端与模型均由你自行部署/配置。</div>
+  <div class=privacy>🔒 <b>隐私说明</b>：① CSV / Excel 交割单<b>仅在本地解析</b>，不外传；② 图片识别需将截图发送至后端 OCR；③ 诊断数字均由确定性引擎计算，AI 仅作文字润色（如已启用）。</div>
   <div class=cols>
-    <div class=feat><h4>① 自动识别风格</h4><p>超短 / 打板接力 / 低吸 / 波段 / 价投,自动判定并采用对应评价标尺。</p></div>
-    <div class=feat><h4>② 确定性指标</h4><p>FIFO 配对重建每笔交易,胜率、盈亏比、持有周期、成本全部由代码算出,数字零幻觉。</p></div>
-    <div class=feat><h4>③ AI 逐项诊断</h4><p>大模型把指标写成通俗诊断与可执行建议;未连后端则用规则引擎,体验不中断。</p></div>
+    <div class=feat><div class=feat-num>1</div><h4>自动识别风格</h4><p>超短 / 打板接力 / 低吸 / 波段 / 价投，自动判定并采用对应评价标尺。</p></div>
+    <div class=feat><div class=feat-num>2</div><h4>确定性指标</h4><p>FIFO 配对重建每笔交易，胜率、盈亏比、持有周期、成本全部由代码算出。</p></div>
+    <div class=feat><div class=feat-num>3</div><h4>规则 + AI 诊断</h4><p>规则引擎找出核心问题；接入后端时 AI 可润色小结与建议。</p></div>
   </div>
 </div>
 <div id=report class=wrap style=display:none></div>
