@@ -187,58 +187,221 @@ TC.dabp=function(trips,mk){
     best:enr.filter(t=>t.pnl>0).sort((a,b)=>b.pnl-a.pnl).slice(0,4).map(ex)};
 };
 
+// ---------- 低吸专属指标(需行情) ----------
+TC.dipbuy=function(trips,mk){
+  const sum=a=>a.reduce((x,y)=>x+y,0);
+  const enr=[];
+  for(const t of trips){
+    const bm=mk[t.code+"|"+t.buy_date.toISOString().slice(0,10)];if(!bm||!bm.open)continue;
+    if(t.buy_price>bm.open*1.002)continue; // 低吸:买入价贴近或低于开盘
+    const nearLow=bm.low&&t.buy_price<=bm.low*1.03;
+    enr.push({...t,nearLow,ret:t.ret||(t.pnl/t.buy_amt*100)});
+  }
+  if(!enr.length)return null;
+  const n=enr.length,wins=enr.filter(t=>t.pnl>0),losses=enr.filter(t=>t.pnl<=0);
+  const midLoss=losses.filter(t=>!t.nearLow); // 未贴近当日低点仍亏损 → 半山腰
+  const quickWin=wins.filter(t=>t.hold<=2&&(t.ret||0)<8);
+  return{n,win_rate:r2(wins.length/n*100),pnl:r2(sum(enr.map(t=>t.pnl))),
+    midair_rate:losses.length?r2(midLoss.length/losses.length*100):0,
+    quick_win_share:wins.length?r2(quickWin.length/wins.length*100):0,
+    avg_hold_win:wins.length?r2(sum(wins.map(t=>t.hold))/wins.length):0};
+};
+
+// ---------- 波段/价投行为洞察(交割单即可) ----------
+TC.swingInsight=function(trips,m,style,f){
+  const sum=a=>a.reduce((x,y)=>x+y,0);
+  const wins=trips.filter(t=>t.pnl>0),losses=trips.filter(t=>t.pnl<=0);
+  const months=Math.max(1,Object.keys(m.monthly||{}).length);
+  const tpm=r2(m.n_trades/months);
+  const quickWins=wins.filter(t=>t.hold<=3);
+  const quickProfit=wins.length?r2(sum(quickWins.map(t=>t.pnl))/sum(wins.map(t=>t.pnl))*100):0;
+  const longLoss=losses.filter(t=>t.hold>10);
+  const longLossPnl=losses.length?r2(sum(longLoss.map(t=>t.pnl))):0;
+  return{tpm,quick_profit_share:quickProfit,long_loss_pnl:longLossPnl,
+    long_loss_n:longLoss.length,n_loss:losses.length};
+};
+
+// ---------- 诊断辅助 ----------
+function _lossShare(pnl,totalPnl){
+  if(!totalPnl||totalPnl>=0||!pnl||pnl>=0)return 0;
+  return r2(Math.abs(pnl)/Math.abs(totalPnl)*100);
+}
+function _evShare(evidence,pnl,totalPnl){
+  const sh=_lossShare(pnl,totalPnl);
+  return sh?evidence+` 约占区间净亏损的 ${sh}%。`:evidence;
+}
+function _overtradeThreshold(style){
+  if(style.refined==="打板接力"||style.primary==="超短")return 25;
+  if(style.primary==="短线")return 20;
+  if(style.primary==="波段")return 12;
+  if(style.primary==="中长线/价投")return 8;
+  if(style.primary==="混合")return 15;
+  return 15;
+}
+function _shouldDisposition(m,style){
+  if(style.primary==="中长线/价投")return m.de_ratio>=3&&m.avg_hold_loss>m.avg_hold_win;
+  if(style.primary==="波段")return m.de_ratio>=2.2&&m.avg_hold_loss>m.avg_hold_win;
+  return m.de_ratio>=1.8&&m.avg_hold_loss>m.avg_hold_win;
+}
+function _shouldStopLoss(m,style){
+  if(style.primary==="中长线/价投")return false;
+  if(style.primary==="波段")return m.loss_over_10d_pct>=55;
+  return m.loss_over_10d_pct>=40;
+}
+function _estDispositionLoss(trips,m){
+  const thr=Math.max(m.avg_hold_win,7);
+  return r2(trips.filter(t=>t.pnl<0&&t.hold>thr).reduce((s,t)=>s+t.pnl,0));
+}
+function _fallbackDiagnose(m,style){
+  const yuan=x=>(x<0?"-￥":"￥")+Math.abs(Math.round(x)).toLocaleString();
+  if(m.total_pnl>0&&m.profit_factor>=1.2&&m.profit_loss_ratio>=1)
+    return{sev:"medium",title:"整体结构尚可 — 保持纪律、防回吐",
+      evidence:`区间净盈利 ${yuan(m.total_pnl)},胜率 ${m.win_rate}%、盈亏比 ${m.profit_loss_ratio}、盈利因子 ${m.profit_factor}。未触发单项严重问题,但需防盈利后放松纪律。`,
+      harm:"结构健康时最容易加大仓位或降标准,一次回撤可抹平多个盈利区间。",
+      fixes:["维持现有入场标准,不因盈利而随手加单","定期复核盈亏比是否仍>1","把本区间交易计划写下来,下区间对照执行"]};
+  if(m.total_pnl>0&&(m.profit_factor<1.1||m.profit_loss_ratio<1))
+    return{sev:"high",title:"账面盈利但结构偏脆 — 赢小亏大隐患",
+      evidence:`区间净${yuan(m.total_pnl)},但盈亏比 ${m.profit_loss_ratio}、盈利因子 ${m.profit_factor}。靠少数大单盈利,整体期望并不稳固。`,
+      harm:"少数大赚掩盖多数小亏,一旦运气回落,净值容易快速回吐。",
+      fixes:["复盘最大盈利单是否可复制,不可复制则降预期","收紧止损,避免小亏累积","降低单笔仓位,先稳住盈亏比"]};
+  if(m.win_rate>=55&&m.profit_loss_ratio<1)
+    return{sev:"critical",title:"胜率高但期望为负 — 典型「赢次数、输金额」",
+      evidence:`胜率 ${m.win_rate}% 不低,但平均每笔赚 ${yuan(m.avg_win)}、亏 ${yuan(m.avg_loss)},盈亏比仅 ${m.profit_loss_ratio},区间净${yuan(m.total_pnl)}。`,
+      harm:"频繁小赢掩盖偶尔大亏,交易次数越多越亏,是超短/低吸常见陷阱。",
+      fixes:["先砍最大亏损来源的几笔交易复盘","设定单笔最大亏损上限","在盈亏比>1.2 之前减少出手频率"]};
+  if(m.total_pnl<0&&m.profit_factor<1)
+    return{sev:"critical",title:"区间负期望 — 需先降频再谈优化",
+      evidence:`区间净亏损 ${yuan(m.total_pnl)},${m.n_trades} 笔交易、胜率 ${m.win_rate}%、盈利因子 ${m.profit_factor}。`,
+      harm:"当前模式下继续交易,统计期望为负,越多做越亏。",
+      fixes:["立即减少出手,先找出亏损最多的 3 笔复盘","暂停新开仓,直到写出明确入场/止损规则","用小仓位验证新规则,再恢复正常频率"]};
+  return{sev:"medium",title:"暂无明显单项警报 — 建议对照计划复盘",
+    evidence:`区间净${yuan(m.total_pnl)},胜率 ${m.win_rate}%、盈亏比 ${m.profit_loss_ratio}。指标未触发专项规则,仍建议逐笔对照原计划检查执行偏差。`,
+    harm:"没有警报不等于没有问题,隐性偏差(仓位、时机)往往要逐笔复盘才看得见。",
+    fixes:["导出交割单逐笔标注「计划内/冲动单」","下区间只做一个方面的改进(止损或降频)","保留交易日志,便于下月对比"]};
+}
+
 // ---------- 规则化诊断 ----------
-TC.diagnose=function(m,style,d){
+TC.diagnose=function(m,style,ctx){
+  ctx=ctx||{};
+  const trips=ctx.trips||[];
+  const dabp=ctx.dabp||null;
+  const dip=ctx.dip||null;
+  const swing=ctx.swing||null;
   const yuan=x=>(x<0?"-￥":"￥")+Math.abs(Math.round(x)).toLocaleString();
   const P=[];
-  // 处置效应
-  if(m.de_ratio>=1.8&&m.avg_hold_loss>m.avg_hold_win)
+  const tpm=m.n_trades/Math.max(1,Object.keys(m.monthly||{}).length);
+  const otThr=_overtradeThreshold(style);
+
+  // 处置效应(风格感知阈值)
+  if(_shouldDisposition(m,style)){
+    const dispLoss=_estDispositionLoss(trips,m);
     P.push({sev:m.de_ratio>=3?"critical":"high",title:"处置效应 — 盈利拿不住、亏损死扛",
-      evidence:`盈利单平均持有 ${m.avg_hold_win} 天就兑现,亏损单平均扛 ${m.avg_hold_loss} 天,是盈利的 ${m.de_ratio} 倍;亏损单中 ${m.loss_over_10d_pct}% 持有超 10 天。`,
+      loss_pnl:dispLoss,
+      evidence:_evShare(`盈利单平均持有 ${m.avg_hold_win} 天就兑现,亏损单平均扛 ${m.avg_hold_loss} 天,是盈利的 ${m.de_ratio} 倍;亏损单中 ${m.loss_over_10d_pct}% 持有超 10 天。`,dispLoss,m.total_pnl),
       harm:"赚一点就跑、亏了死扛,单笔亏损被放大,长期持续拉低盈亏比。",
       fixes:["买入即设止损位并机械执行","盈利单改用移动止盈,不情绪性了结","每周跟踪盈/亏单持有天数差作为纪律KPI"]});
+  }
   // 盈亏比/负期望
   if(m.profit_loss_ratio<1||m.profit_factor<1)
     P.push({sev:"critical",title:"盈亏结构为负期望 — 赢小钱亏大钱",
-      evidence:`平均每笔赚 ${yuan(m.avg_win)}、亏 ${yuan(m.avg_loss)},盈亏比仅 ${m.profit_loss_ratio};叠加 ${m.win_rate}% 胜率,盈利因子 ${m.profit_factor}(<1 为负期望)。`,
+      loss_pnl:m.total_pnl<0?m.total_pnl:0,
+      evidence:_evShare(`平均每笔赚 ${yuan(m.avg_win)}、亏 ${yuan(m.avg_loss)},盈亏比仅 ${m.profit_loss_ratio};叠加 ${m.win_rate}% 胜率,盈利因子 ${m.profit_factor}(<1 为负期望)。`,m.total_pnl,m.total_pnl),
       harm:"统计上每笔交易都是负收益,交易越多亏得越多。",
       fixes:["严格止损,让平均亏损低于平均盈利","胜率难升则靠盈亏比取胜,宁可少做","单笔最大亏损不超过本金1%~2%"]});
-  // 不止损
-  if(m.loss_over_10d_pct>=40&&style.primary!=="中长线/价投")
-    P.push({sev:"high",title:"止损纪律弱 — 亏损单长期挂账",
-      evidence:`${m.loss_over_10d_pct}% 的亏损单持有超 10 天,最大单笔亏损 ${yuan(m.max_loss)}。`,
+  // 止损纪律(风格感知)
+  if(_shouldStopLoss(m,style))
+    P.push({sev:"high",title:style.primary==="波段"?"波段止损拖太久 — 亏损单长期挂账":"止损纪律弱 — 亏损单长期挂账",
+      loss_pnl:swing?swing.long_loss_pnl:m.max_loss,
+      evidence:_evShare(`${m.loss_over_10d_pct}% 的亏损单持有超 10 天,最大单笔亏损 ${yuan(m.max_loss)}。`,swing?swing.long_loss_pnl:m.max_loss,m.total_pnl),
       harm:"小亏拖成大亏、占用资金、错失机会,风险敞口失控。",
-      fixes:["触及止损位当日无条件卖出","禁止向下补仓摊薄成本","收盘检查持仓,超周期且亏损的强制复核"]});
-  // 成本
-  if(m.cost_vs_grossprofit>=8||m.n_trades/Math.max(1,Object.keys(m.monthly).length)>=15)
+      fixes:style.primary==="波段"?["波段也应设最大持有天数,到期未达预期即减仓","亏损达阈值当日处理,不等待「回本」","复盘是否买在趋势末端"]:["触及止损位当日无条件卖出","禁止向下补仓摊薄成本","收盘检查持仓,超周期且亏损的强制复核"]});
+  // 过度交易/成本(风格感知频率阈值)
+  if(m.cost_vs_grossprofit>=8||tpm>=otThr)
     P.push({sev:"medium",title:"交易频繁 — 成本持续侵蚀",
-      evidence:`区间 ${m.n_trades} 笔交易、${m.n_orders} 次成交,总成交额 ${yuan(m.turnover)},费用合计 ${yuan(m.total_cost)},吃掉总盈利的 ${m.cost_vs_grossprofit}%。`,
+      loss_pnl:-m.total_cost,
+      evidence:`区间 ${m.n_trades} 笔交易、${m.n_orders} 次成交(约 ${r2(tpm)} 笔/月,${style.label} 参考上限 ${otThr}),总成交额 ${yuan(m.turnover)},费用合计 ${yuan(m.total_cost)},${m.cost_vs_grossprofit?`吃掉总盈利的 ${m.cost_vs_grossprofit}%`: "成本占成交额 "+m.cost_vs_turnover+"%"}。`,
       harm:"在不占优时,高频只会放大负期望并被固定成本抽血。",
-      fixes:["提高入场标准,减少随手单","复盘砍掉冲动型交易","关注佣金费率,必要时与券商协商下调"]});
+      fixes:style.primary==="中长线/价投"?["价投应重质不重量,降低换股频率","单笔研究透再出手,减少「看看再说」的试单","关注佣金费率"]:["提高入场标准,减少随手单","复盘砍掉冲动型交易","关注佣金费率,必要时与券商协商下调"]});
+
   // 打板专属
-  if(d){
-    const bs=d.board_stats,lo=bs["首板"],hi=bs["四板+"];
-    if(d.senti_stats["退潮(情绪<40)"]&&d.senti_stats["退潮(情绪<40)"].pnl<0){
-      const t=d.senti_stats["退潮(情绪<40)"],share=m.total_pnl<0?r2(Math.abs(t.pnl)/Math.abs(m.total_pnl)*100):0;
+  if(dabp){
+    const bs=dabp.board_stats,lo=bs["首板"],hi=bs["四板+"];
+    if(dabp.senti_stats["退潮(情绪<40)"]&&dabp.senti_stats["退潮(情绪<40)"].pnl<0){
+      const t=dabp.senti_stats["退潮(情绪<40)"];
       P.unshift({sev:"critical",title:"退潮期硬刚 — 亏损主要来自逆势接力",
-        evidence:`退潮期(情绪<40)做了 ${t.n} 笔、胜率 ${t.win_rate}%、${yuan(t.pnl)},约占净亏损的 ${share}%。`,
+        loss_pnl:t.pnl,
+        evidence:_evShare(`退潮期(情绪<40)做了 ${t.n} 笔、胜率 ${t.win_rate}%、${yuan(t.pnl)}。`,t.pnl,m.total_pnl),
         harm:"退潮期赚钱效应消失、连板批量炸板,满仓接力等于逆势送钱。",
         fixes:["退潮期(炸板率高/梯队断裂)直接空仓或降频","用涨停家数+连板高度做情绪温度计开关","只在主升/修复期出手"]});
     }
     if(hi&&lo&&hi.win_rate<lo.win_rate-15)
       P.push({sev:"high",title:"越追高板越亏 — 连板高度与胜率负相关",
-        evidence:`分项胜率:首板 ${lo.win_rate}%、四板+ 仅 ${hi.win_rate}%;四板+ 合计 ${yuan(hi.pnl)}。`,
+        loss_pnl:hi.pnl<0?hi.pnl:0,
+        evidence:_evShare(`分项胜率:首板 ${lo.win_rate}%、四板+ 仅 ${hi.win_rate}%;四板+ 合计 ${yuan(hi.pnl)}。`,hi.pnl,m.total_pnl),
         harm:"高位连板容错率极低,越往上打越是给情绪买单。",
         fixes:["收缩高度:以首板/二板为主,回避四板+","打高板必须更小仓位+更严止损","每月复盘连板分项胜率,只做正期望高度"]});
-    if(d.n_underwater>0&&d.cut_rate<50)
+    if(dabp.n_underwater>0&&dabp.cut_rate<50)
       P.push({sev:"high",title:"几乎不核按钮 — 水下死扛放大亏损",
-        evidence:`次日水下 ${d.n_underwater} 笔仅 ${d.n_cut} 笔(${d.cut_rate}%)开盘止损;果断核按钮均收益 ${d.avg_cut}%,死扛 ${d.avg_hold_uw}%。`,
+        loss_pnl:dabp.avg_hold_uw?null:0,
+        evidence:`次日水下 ${dabp.n_underwater} 笔仅 ${dabp.n_cut} 笔(${dabp.cut_rate}%)开盘止损;果断核按钮均收益 ${dabp.avg_cut}%,死扛均收益 ${dabp.avg_hold_uw}%。`,
         harm:"打板的生命线是错了立刻走,不核按钮等于把短线做成被动中线。",
         fixes:["次日不及预期,集合竞价/开盘无条件核按钮","禁止等反弹、回本再走","把水下核按钮执行率当纪律KPI"]});
   }
+
+  // P1: 低吸专属
+  if(dip&&dip.n>=3){
+    if(dip.win_rate<42&&dip.pnl<0)
+      P.push({sev:"critical",title:"低吸期望为负 — 抄底策略需暂停验证",
+        loss_pnl:dip.pnl,
+        evidence:_evShare(`标记为低吸的 ${dip.n} 笔,胜率 ${dip.win_rate}%、合计 ${yuan(dip.pnl)}。`,dip.pnl,m.total_pnl),
+        harm:"反复在下跌途中接飞刀,小反弹不足以覆盖趋势亏损。",
+        fixes:["暂停低吸,先等大盘/个股企稳信号","只在「跌不动+放量」结构出现后再试","低吸单必须更小仓位+更紧止损"]});
+    if(dip.midair_rate>=45&&dip.n>=4)
+      P.push({sev:"high",title:"低吸常买在半山腰 — 未贴近低点仍入场",
+        loss_pnl:dip.pnl<0?dip.pnl:0,
+        evidence:`低吸亏损单中 ${dip.midair_rate}% 买入价未贴近当日低点(>低点 3%),说明多数抄在下跌中继而非真正企稳。`,
+        harm:"以为在低吸,实际在趋势中段,稍微反弹后继续阴跌。",
+        fixes:["等二次探底或分时背离再入场","禁止「跌多少买多少」的网格冲动","对照当日 K 线,只在前低附近挂单"]});
+    if(dip.quick_win_share>=55&&dip.avg_hold_win<=2)
+      P.push({sev:"medium",title:"反弹即走 — 盈利单兑现过快",
+        evidence:`低吸盈利单中 ${dip.quick_win_share}% 持有≤2 天就卖出,平均盈利持有 ${dip.avg_hold_win} 天。`,
+        harm:"反弹利润吃不满,一次大亏即可抵消多次小赢,盈亏比难抬升。",
+        fixes:["设定分批止盈,留底仓博趋势延续","用移动止盈替代「见红就走」","复盘卖飞的大肉,总结持有规则"]});
+  }
+
+  // P1: 波段/价投专属
+  if(swing){
+    if(style.primary==="波段"&&m.avg_hold_win<=4&&swing.quick_profit_share>=65&&m.gross_profit>0)
+      P.push({sev:"high",title:"波段盈利拿不住 — 大肉卖太早",
+        evidence:`盈利单中 ${swing.quick_profit_share}% 的利润来自持有≤3 天的交易;盈利单平均仅持 ${m.avg_hold_win} 天。`,
+        harm:"波段靠趋势利润,过早兑现会错过主浪,只剩小赢大亏结构。",
+        fixes:["盈利达 1R 后留半仓,余仓用均线/前低跟踪止盈","设定最小持有目标(如至少 5 天)再评估","复盘最大盈利单,看是否卖在启动初期"]});
+    if(style.primary==="中长线/价投"&&swing.tpm>8)
+      P.push({sev:"medium",title:"价投型账户交易过频 — 换股太多",
+        evidence:`约 ${swing.tpm} 笔完整交易/月(价投参考上限 8),${m.n_trades} 笔区间交易、${m.n_orders} 次成交。`,
+        harm:"频繁换股叠加成本与误判,价投应靠少数高质量决策,不是高频试错。",
+        fixes:["缩小股票池,深度研究后再建仓","设定最小持有周期(如 20 个交易日)","新增标的需写投资逻辑,冲动单禁止"]});
+    if(style.primary==="波段"&&m.avg_hold_loss>=12&&m.loss_over_10d_pct>=35)
+      P.push({sev:"high",title:"波段亏损拖成「被动长线」",
+        loss_pnl:swing.long_loss_pnl,
+        evidence:_evShare(`亏损单平均持有 ${m.avg_hold_loss} 天,${m.loss_over_10d_pct}% 超 10 天;长持亏损单合计 ${yuan(swing.long_loss_pnl)}。`,swing.long_loss_pnl,m.total_pnl),
+        harm:"波段本应截断亏损,拖成长线会占用资金且心态变形。",
+        fixes:["波段单设硬止损(如 -8%)与最长持有天数","亏损单不复盘出改进方案则禁止补仓","每周清理「超期亏损」持仓清单"]});
+  }
+
+  // P0: 兜底 — 无专项规则命中时仍给一条总评
+  if(!P.length)P.push(_fallbackDiagnose(m,style));
+
+  // 按严重度 + 亏损贡献排序,标注优先级
   const order={critical:0,high:1,medium:2};
-  P.sort((a,b)=>order[a.sev]-order[b.sev]);
-  return P.slice(0,6).map((p,i)=>({id:String(i+1).padStart(2,"0"),...p}));
+  P.sort((a,b)=>{
+    const d=order[a.sev]-order[b.sev];if(d)return d;
+    return (b.loss_pnl||0)-(a.loss_pnl||0);
+  });
+  return P.slice(0,6).map((p,i)=>{
+    const rank=i===0&&P.length>1?"【优先改进】":"";
+    return{id:String(i+1).padStart(2,"0"),...p,title:rank+p.title};
+  });
 };
 
 // ---------- 总入口 ----------
@@ -251,9 +414,15 @@ TC.analyze=function(dealText,marketText){
   const f=TC.features(trips,deals,mk);
   const style=TC.classify(f);
   const m=TC.metrics(trips,deals);
-  let dabp=null;
-  if(f.has_market&&(style.refined==="打板接力"||(f.db_ratio!=null&&f.db_ratio>=35)))dabp=TC.dabp(trips,mk);
-  const diagnoses=TC.diagnose(m,style,dabp);
+  const ctx={trips};
+  if(f.has_market&&(style.refined==="打板接力"||(f.db_ratio!=null&&f.db_ratio>=35)))
+    ctx.dabp=TC.dabp(trips,mk);
+  if(f.has_market&&(style.refined==="低吸"||(f.lo_ratio!=null&&f.lo_ratio>=50)))
+    ctx.dip=TC.dipbuy(trips,mk);
+  if(style.primary==="波段"||style.primary==="中长线/价投")
+    ctx.swing=TC.swingInsight(trips,m,style,f);
+  const diagnoses=TC.diagnose(m,style,ctx);
+  let dabp=ctx.dabp||null;
   return{style,features:f,metrics:m,dabp,diagnoses,n_trips:trips.length};
 };
 

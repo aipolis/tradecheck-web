@@ -10,11 +10,13 @@ const apiURL=p=>BACKEND_BASE?BACKEND_BASE+p:p;
 async function probeBackend(){
   // 1. 探测主后端 /api/health(TradeCheck 本地 server 或 mrdk 都接受这个路径)
   try{const r=await fetch(apiURL("/api/health"),{cache:"no-store",signal:AbortSignal.timeout(3000)});
-    if(r.ok){const j=await r.json();BACKEND.ok=true;BACKEND.mock=j.mock;BACKEND.model=j.model;BACKEND.feature=j.feature||"local";}}
+    if(r.ok){const j=await r.json();BACKEND.ok=true;BACKEND.mock=j.mock;BACKEND.model=j.model;BACKEND.feature=j.feature||"local";
+      BACKEND.diagnose=!!(j.model||j.diagnose);}}
   catch(e){BACKEND.ok=false;}
   // 2. 单独探测 TradeCheck 子系统(mrdk 部署时存在 /api/tradecheck/health),并读取能力清单
   try{const r=await fetch(apiURL("/api/tradecheck/health"),{cache:"no-store",signal:AbortSignal.timeout(3000)});
-    if(r.ok){const j=await r.json();BACKEND.tc=true;BACKEND.tcCaps=j.capabilities||{};BACKEND.tcLLM=j.llm||{};}}
+    if(r.ok){const j=await r.json();BACKEND.tc=true;BACKEND.tcCaps=j.capabilities||{};BACKEND.tcLLM=j.llm||{};
+      if(BACKEND.tcCaps.diagnose)BACKEND.diagnose=true;}
   catch(e){BACKEND.tc=false;}
   const el=$("#beStatus");if(!el)return;
   // 只汇报对 TradeCheck 真正有意义的能力
@@ -169,7 +171,7 @@ async function run(){$("#err").textContent="";
     const R=TC.analyze(dealText,mktText);
     if(mktNote)R.marketFetch=mktNote;
 
-    if(BACKEND.ok){
+    if(BACKEND.diagnose){
       setBusy(true,"正在生成 AI 诊断…");
       try{
         const r=await fetch(apiURL("/api/diagnose"),{method:"POST",headers:{"content-type":"application/json"},
@@ -179,7 +181,7 @@ async function run(){$("#err").textContent="";
         if(Array.isArray(j.problems)&&j.problems.length)
           R.diagnoses=j.problems.map((p,i)=>({id:p.id||String(i+1).padStart(2,"0"),
             sev:(R.diagnoses[i]&&R.diagnoses[i].sev)||"high",title:p.title,evidence:p.evidence,harm:p.harm,fixes:p.fixes||[]}));
-      }catch(e){R.aiError=e.message;}
+      }catch(e){console.warn("[diagnose]",e.message);}
     }
     $("#upload").style.display="none";$("#report").style.display="block";renderReport(R);window.scrollTo(0,0);
   }catch(e){$("#err").textContent="⚠ "+e.message;}
@@ -228,7 +230,6 @@ function renderReport(R){
   // AI 小结
   let aiHtml="";
   if(R.ai&&R.ai.summary){aiHtml=`<div class="aibox"><div class=ai-tag>🤖 AI 诊断小结 ${R.ai.mock?"<span class=mock>mock</span>":"<span class=real>大模型</span>"}</div><p>${R.ai.summary}</p></div>`;}
-  else if(R.aiError){aiHtml=`<div class="aibox warnbox">AI 诊断暂不可用(${R.aiError}),以下为规则引擎诊断。</div>`;}
 
   let dabpHtml="";
   if(d){const sr=g=>d.senti_stats[g]||{n:0,win_rate:0,pnl:0};const tide=sr("退潮(情绪<40)");
