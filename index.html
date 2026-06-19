@@ -413,15 +413,19 @@ async function probeBackend(){
   try{const r=await fetch(apiURL("/api/health"),{cache:"no-store",signal:AbortSignal.timeout(3000)});
     if(r.ok){const j=await r.json();BACKEND.ok=true;BACKEND.mock=j.mock;BACKEND.model=j.model;BACKEND.feature=j.feature||"local";}}
   catch(e){BACKEND.ok=false;}
-  // 2. 单独探测 TradeCheck 子系统(mrdk 部署时存在 /api/tradecheck/health)
+  // 2. 单独探测 TradeCheck 子系统(mrdk 部署时存在 /api/tradecheck/health),并读取能力清单
   try{const r=await fetch(apiURL("/api/tradecheck/health"),{cache:"no-store",signal:AbortSignal.timeout(3000)});
-    if(r.ok){BACKEND.tc=true;}}
+    if(r.ok){const j=await r.json();BACKEND.tc=true;BACKEND.tcCaps=j.capabilities||{};BACKEND.tcLLM=j.llm||{};}}
   catch(e){BACKEND.tc=false;}
   const el=$("#beStatus");if(!el)return;
-  // 只汇报对 TradeCheck 真正有意义的能力:行情自动补、AI 诊断需独立确认
-  // mrdk 主健康接口 200 ≠ AI 诊断可用,故不再把 BACKEND.ok 等同于 AI 可用
-  if(BACKEND.tc){el.innerHTML="● 行情服务就绪 — 上传交割单后自动补日线";el.className="be on";}
-  else{el.innerHTML="○ 离线模式 — 仅本地规则诊断可用";el.className="be off";}
+  // 只汇报对 TradeCheck 真正有意义的能力
+  if(BACKEND.tc){
+    const caps=[];
+    caps.push("自动补行情");
+    if(BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv)caps.push("图片 OCR 解析");
+    el.innerHTML="● 后端就绪 — "+caps.join(" · ");
+    el.className="be on";
+  } else {el.innerHTML="○ 离线模式 — 仅本地规则诊断可用";el.className="be off";}
 }
 
 /* 自动从后端拉行情:输入是已 parseDeals 后的交易明细数组,输出 CSV 字符串(供 TC.analyze 第二参) */
@@ -478,12 +482,19 @@ async function run(){$("#err").textContent="";
   try{
     let dealText=fileDeal;
     if(!dealText&&images.length){
-      if(!BACKEND.ok)throw new Error("图片识别需要后端:请先运行 app/server.py,或在 TRADECHECK_BACKEND 中配置 mrdk 公网域名(或改用 CSV 交割单)。");
-      setBusy(true,"正在识别图片中的交割单…");
-      const r=await fetch(apiURL("/api/extract"),{method:"POST",headers:{"content-type":"application/json"},
+      // 公网部署优先走 mrdk 后端的 /api/tradecheck/extract_csv(RapidOCR + LLM)
+      // 本地开发回退到 server.py 的 /api/extract(图像视觉模型,可选)
+      const useTcOcr=BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv;
+      if(!useTcOcr&&!BACKEND.ok){
+        throw new Error("图片识别需要后端:管理员请在 mrdk 容器里配置 DEEPSEEK_API_KEY 或 ZHIPU_API_KEY,或改用 CSV 交割单上传。");
+      }
+      setBusy(true,"正在 OCR + AI 解析图片中的交割单…");
+      const ep=useTcOcr?"/api/tradecheck/extract_csv":"/api/extract";
+      const r=await fetch(apiURL(ep),{method:"POST",headers:{"content-type":"application/json"},
         body:JSON.stringify({images:images.map(i=>i.url)})});
-      const j=await r.json();if(!r.ok)throw new Error(j.error||"图片识别失败");
+      const j=await r.json();if(!r.ok)throw new Error(j.detail||j.error||("图片识别失败 HTTP "+r.status));
       dealText=j.csv;
+      if(j.n_rows!==undefined){console.log("[extract_csv] OCR 行:",j.ocr_lines,"解析交易笔数:",j.n_rows);}
     }
     if(!dealText)throw new Error("请上传交割单(CSV 或图片)。");
 
