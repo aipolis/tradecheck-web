@@ -7,27 +7,44 @@ const yuan2=x=>(x<0?"-￥":"￥")+Math.abs(x).toLocaleString(undefined,{minimumF
 const BACKEND_BASE=(window.TRADECHECK_BACKEND||"").replace(/\/$/,"");
 const apiURL=p=>BACKEND_BASE?BACKEND_BASE+p:p;
 
+function fetchTimeout(url,ms){
+  ms=ms||4000;
+  if(typeof AbortSignal!=="undefined"&&AbortSignal.timeout)
+    return fetch(url,{cache:"no-store",signal:AbortSignal.timeout(ms)});
+  const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms);
+  return fetch(url,{cache:"no-store",signal:ctrl.signal}).finally(()=>clearTimeout(t));
+}
+
 async function probeBackend(){
-  // 1. 探测主后端 /api/health(TradeCheck 本地 server 或 mrdk 都接受这个路径)
-  try{const r=await fetch(apiURL("/api/health"),{cache:"no-store",signal:AbortSignal.timeout(3000)});
-    if(r.ok){const j=await r.json();BACKEND.ok=true;BACKEND.mock=j.mock;BACKEND.model=j.model;BACKEND.feature=j.feature||"local";
-      BACKEND.diagnose=!!(j.model||j.diagnose);}}
-  catch(e){BACKEND.ok=false;}
-  // 2. 单独探测 TradeCheck 子系统(mrdk 部署时存在 /api/tradecheck/health),并读取能力清单
-  try{const r=await fetch(apiURL("/api/tradecheck/health"),{cache:"no-store",signal:AbortSignal.timeout(3000)});
-    if(r.ok){const j=await r.json();BACKEND.tc=true;BACKEND.tcCaps=j.capabilities||{};BACKEND.tcLLM=j.llm||{};
-      if(BACKEND.tcCaps.diagnose)BACKEND.diagnose=true;}
-  catch(e){BACKEND.tc=false;}
-  const el=$("#beStatus");if(!el)return;
-  // 只汇报对 TradeCheck 真正有意义的能力
+  const el=$("#beStatus");
+  try{
+    // 并行探测,避免串行等待拖长「检测后端中…」
+    const [mainRes,tcRes]=await Promise.allSettled([
+      fetchTimeout(apiURL("/api/health"),4000).then(async r=>r.ok?r.json():null).catch(()=>null),
+      fetchTimeout(apiURL("/api/tradecheck/health"),4000).then(async r=>r.ok?r.json():null).catch(()=>null),
+    ]);
+    if(mainRes.status==="fulfilled"&&mainRes.value){
+      const j=mainRes.value;
+      BACKEND.ok=true;BACKEND.mock=j.mock;BACKEND.model=j.model;BACKEND.feature=j.feature||"local";
+      BACKEND.diagnose=!!(j.model||j.diagnose);
+    }
+    if(tcRes.status==="fulfilled"&&tcRes.value){
+      const j=tcRes.value;
+      BACKEND.tc=true;BACKEND.tcCaps=j.capabilities||{};BACKEND.tcLLM=j.llm||{};
+      if(BACKEND.tcCaps.diagnose)BACKEND.diagnose=true;
+    }
+  }catch(e){console.warn("[probeBackend]",e);}
+  if(!el)return;
   if(BACKEND.tc){
-    const caps=[];
-    caps.push("自动补行情");
+    const caps=["自动补行情"];
     if(BACKEND.tcCaps&&BACKEND.tcCaps.ocr&&BACKEND.tcCaps.parse_csv)caps.push("图片 OCR 解析(分批)");
     else if(BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv)caps.push("图片 OCR 解析");
     el.innerHTML="● 后端就绪 — "+caps.join(" · ");
     el.className="be on";
-  } else {el.innerHTML="○ 离线模式 — 仅本地规则诊断可用";el.className="be off";}
+  }else{
+    el.innerHTML="○ 离线模式 — 仅本地规则诊断可用";
+    el.className="be off";
+  }
 }
 
 const OCR_BATCH_SIZE=3; // 每批 3 张,绕开云托管网关单次请求超时/限流
