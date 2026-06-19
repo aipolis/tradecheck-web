@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width, initial-scale=1, viewport-fit=cover"><title>TradeCheck · 交易诊断助手</title><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><style>
+<!DOCTYPE html><html lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width, initial-scale=1, viewport-fit=cover"><title>TradeCheck · 交易诊断助手</title><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><style>
 :root{--bg:#f5f7fb;--card:#fff;--ink:#1f2733;--mut:#7a8699;--line:#e6ebf2;--pos:#d83a3a;--neg:#178a5a;--warn:#d98a00;--accent:#1f4e79;--accent2:#2e75b6;}
 /* A 股惯例:盈利(--pos)红、亏损(--neg)绿。下方非 P&L 用途的红/绿用硬编码避免被翻转 */
 *{box-sizing:border-box}
@@ -156,10 +156,10 @@ th,td{padding:6px 8px}
   </div>
   <div class=zones>
     <div class=zone id=dealZone>
-      <div class=ic>📄</div><div class=ttl>交割单 CSV</div>
-      <div class=hint>券商导出的成交记录文件<br>含日期/代码/买卖/价格/数量</div>
+      <div class=ic>📄</div><div class=ttl>交割单 CSV / Excel</div>
+      <div class=hint>券商导出的成交记录(.csv / .xlsx / .xls)<br>含日期/代码/买卖/价格/数量,本地解析</div>
       <div class=fname id=dealName></div>
-      <input type=file id=dealInput accept=".csv,.txt" hidden>
+      <input type=file id=dealInput accept=".csv,.txt,.xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
     </div>
     <div class=zone imgzone id=imgZone>
       <div class=ic>🖼️</div><div class=ttl>交割单截图 <span class=opt>支持多张</span></div>
@@ -740,9 +740,60 @@ async function autoFetchMarket(deals){
   return {csv:j.csv,unresolved:j.unresolved||[],nRows:j.n_rows||0,nResolved:j.n_resolved||0};
 }
 
-function setCSV(which,file){const rd=new FileReader();rd.onload=()=>{
-  fileDeal=rd.result;$("#dealName").textContent="✓ "+file.name;$("#dealZone").classList.add("ok");
-  syncRun();};rd.readAsText(file,"utf-8");}
+function excelToCsv(buf){
+  if(typeof XLSX==="undefined")throw new Error("Excel 解析组件未加载,请刷新页面重试");
+  const wb=XLSX.read(buf,{type:"array",cellDates:true});
+  const sheet=wb.Sheets[wb.SheetNames[0]];
+  if(!sheet)throw new Error("Excel 文件中没有工作表");
+  const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:"",raw:false,dateNF:"yyyy-mm-dd hh:mm:ss"});
+  let start=0;
+  for(let i=0;i<Math.min(rows.length,25);i++){
+    const line=(rows[i]||[]).join("|");
+    if(/成交|证券代码|买卖|操作|业务名称/.test(line)){start=i;break;}
+  }
+  const esc=c=>{const s=c==null?"":String(c);return /[\",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const fmt=c=>{
+    if(c==null||c==="")return "";
+    if(c instanceof Date){
+      const p=n=>String(n).padStart(2,"0");
+      return c.getFullYear()+"-"+p(c.getMonth()+1)+"-"+p(c.getDate())+" "+p(c.getHours())+":"+p(c.getMinutes())+":"+p(c.getSeconds());
+    }
+    return String(c);
+  };
+  return rows.slice(start).filter(r=>r&&r.some(c=>c!=null&&String(c).trim()!==""))
+    .map(r=>r.map(c=>esc(fmt(c))).join(",")).join("\n");
+}
+function isExcelFile(file){
+  const n=(file.name||"").toLowerCase();
+  return /\.(xlsx|xls)$/.test(n)||/spreadsheet|excel/.test(file.type||"");
+}
+function isDealTextFile(file){
+  const n=(file.name||"").toLowerCase();
+  return /\.(csv|txt)$/.test(n)||file.type==="text/csv"||file.type==="text/plain";
+}
+function applyDealText(text,name){
+  fileDeal=text;$("#dealName").textContent="✓ "+name;$("#dealZone").classList.add("ok");
+  $("#err").textContent="";syncRun();
+}
+function loadDealFile(which,file){
+  if(which!=="deal")return;
+  if(isExcelFile(file)){
+    const rd=new FileReader();
+    rd.onload=()=>{try{applyDealText(excelToCsv(rd.result),file.name);}
+      catch(e){$("#err").textContent="⚠ Excel 解析失败: "+e.message;}};
+    rd.onerror=()=>{$("#err").textContent="⚠ 无法读取 Excel 文件";};
+    rd.readAsArrayBuffer(file);
+  }else if(isDealTextFile(file)){
+    const rd=new FileReader();
+    rd.onload=()=>applyDealText(rd.result,file.name);
+    rd.onerror=()=>{$("#err").textContent="⚠ 无法读取文件";};
+    rd.readAsText(file,"utf-8");
+  }else{$("#err").textContent="⚠ 请上传 CSV、TXT 或 Excel(.xlsx/.xls) 文件";}
+}
+function pickDealFile(files){
+  for(const f of files){if(isExcelFile(f)||isDealTextFile(f))return f;}
+  return null;
+}
 function addImages(files){[...files].forEach(f=>{if(!f.type.startsWith("image/"))return;const rd=new FileReader();
   rd.onload=()=>{images.push({name:f.name,url:rd.result});renderThumbs();syncRun();};rd.readAsDataURL(f);});}
 function renderThumbs(){const w=$("#thumbs");w.innerHTML=images.map((im,i)=>
@@ -754,8 +805,8 @@ function syncRun(){$("#runBtn").disabled=!(fileDeal||images.length);}
 
 function bindCSV(zone,input,which){const z=$("#"+zone),inp=$("#"+input);
   z.addEventListener("click",()=>inp.click());
-  inp.addEventListener("change",e=>{if(e.target.files[0])setCSV(which,e.target.files[0]);});
-  dnd(z,fs=>{if(fs[0])setCSV(which,fs[0]);});}
+  inp.addEventListener("change",e=>{if(e.target.files[0])loadDealFile(which,e.target.files[0]);});
+  dnd(z,fs=>{const f=pickDealFile([...fs]);if(f)loadDealFile(which,f);});}
 function bindImg(){const z=$("#imgZone"),inp=$("#imgInput");
   z.addEventListener("click",e=>{if(!e.target.classList.contains("x"))inp.click();});
   inp.addEventListener("change",e=>addImages(e.target.files));dnd(z,fs=>addImages(fs));}

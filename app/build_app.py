@@ -183,10 +183,10 @@ UPLOAD = """
   </div>
   <div class=zones>
     <div class=zone id=dealZone>
-      <div class=ic>📄</div><div class=ttl>交割单 CSV</div>
-      <div class=hint>券商导出的成交记录文件<br>含日期/代码/买卖/价格/数量</div>
+      <div class=ic>📄</div><div class=ttl>交割单 CSV / Excel</div>
+      <div class=hint>券商导出的成交记录(.csv / .xlsx / .xls)<br>含日期/代码/买卖/价格/数量,本地解析</div>
       <div class=fname id=dealName></div>
-      <input type=file id=dealInput accept=".csv,.txt" hidden>
+      <input type=file id=dealInput accept=".csv,.txt,.xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
     </div>
     <div class=zone imgzone id=imgZone>
       <div class=ic>🖼️</div><div class=ttl>交割单截图 <span class=opt>支持多张</span></div>
@@ -227,6 +227,7 @@ html = ("<!DOCTYPE html><html lang=zh-CN><head><meta charset=utf-8>"
 "<meta name=viewport content=\"width=device-width, initial-scale=1, viewport-fit=cover\">"
 "<title>TradeCheck · 交易诊断助手</title>"
 "<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js\"></script>"
+"<script src=\"https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js\"></script>"
 "<style>"+CSS+"</style></head><body>"+UPLOAD+
 "<script>window.TRADECHECK_BACKEND="+repr(BACKEND_URL)+";</script>"
 "<script>"+eng+"</script>"

@@ -118,9 +118,60 @@ async function autoFetchMarket(deals){
   return {csv:j.csv,unresolved:j.unresolved||[],nRows:j.n_rows||0,nResolved:j.n_resolved||0};
 }
 
-function setCSV(which,file){const rd=new FileReader();rd.onload=()=>{
-  fileDeal=rd.result;$("#dealName").textContent="✓ "+file.name;$("#dealZone").classList.add("ok");
-  syncRun();};rd.readAsText(file,"utf-8");}
+function excelToCsv(buf){
+  if(typeof XLSX==="undefined")throw new Error("Excel 解析组件未加载,请刷新页面重试");
+  const wb=XLSX.read(buf,{type:"array",cellDates:true});
+  const sheet=wb.Sheets[wb.SheetNames[0]];
+  if(!sheet)throw new Error("Excel 文件中没有工作表");
+  const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:"",raw:false,dateNF:"yyyy-mm-dd hh:mm:ss"});
+  let start=0;
+  for(let i=0;i<Math.min(rows.length,25);i++){
+    const line=(rows[i]||[]).join("|");
+    if(/成交|证券代码|买卖|操作|业务名称/.test(line)){start=i;break;}
+  }
+  const esc=c=>{const s=c==null?"":String(c);return /[\",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const fmt=c=>{
+    if(c==null||c==="")return "";
+    if(c instanceof Date){
+      const p=n=>String(n).padStart(2,"0");
+      return c.getFullYear()+"-"+p(c.getMonth()+1)+"-"+p(c.getDate())+" "+p(c.getHours())+":"+p(c.getMinutes())+":"+p(c.getSeconds());
+    }
+    return String(c);
+  };
+  return rows.slice(start).filter(r=>r&&r.some(c=>c!=null&&String(c).trim()!==""))
+    .map(r=>r.map(c=>esc(fmt(c))).join(",")).join("\n");
+}
+function isExcelFile(file){
+  const n=(file.name||"").toLowerCase();
+  return /\.(xlsx|xls)$/.test(n)||/spreadsheet|excel/.test(file.type||"");
+}
+function isDealTextFile(file){
+  const n=(file.name||"").toLowerCase();
+  return /\.(csv|txt)$/.test(n)||file.type==="text/csv"||file.type==="text/plain";
+}
+function applyDealText(text,name){
+  fileDeal=text;$("#dealName").textContent="✓ "+name;$("#dealZone").classList.add("ok");
+  $("#err").textContent="";syncRun();
+}
+function loadDealFile(which,file){
+  if(which!=="deal")return;
+  if(isExcelFile(file)){
+    const rd=new FileReader();
+    rd.onload=()=>{try{applyDealText(excelToCsv(rd.result),file.name);}
+      catch(e){$("#err").textContent="⚠ Excel 解析失败: "+e.message;}};
+    rd.onerror=()=>{$("#err").textContent="⚠ 无法读取 Excel 文件";};
+    rd.readAsArrayBuffer(file);
+  }else if(isDealTextFile(file)){
+    const rd=new FileReader();
+    rd.onload=()=>applyDealText(rd.result,file.name);
+    rd.onerror=()=>{$("#err").textContent="⚠ 无法读取文件";};
+    rd.readAsText(file,"utf-8");
+  }else{$("#err").textContent="⚠ 请上传 CSV、TXT 或 Excel(.xlsx/.xls) 文件";}
+}
+function pickDealFile(files){
+  for(const f of files){if(isExcelFile(f)||isDealTextFile(f))return f;}
+  return null;
+}
 function addImages(files){[...files].forEach(f=>{if(!f.type.startsWith("image/"))return;const rd=new FileReader();
   rd.onload=()=>{images.push({name:f.name,url:rd.result});renderThumbs();syncRun();};rd.readAsDataURL(f);});}
 function renderThumbs(){const w=$("#thumbs");w.innerHTML=images.map((im,i)=>
@@ -132,8 +183,8 @@ function syncRun(){$("#runBtn").disabled=!(fileDeal||images.length);}
 
 function bindCSV(zone,input,which){const z=$("#"+zone),inp=$("#"+input);
   z.addEventListener("click",()=>inp.click());
-  inp.addEventListener("change",e=>{if(e.target.files[0])setCSV(which,e.target.files[0]);});
-  dnd(z,fs=>{if(fs[0])setCSV(which,fs[0]);});}
+  inp.addEventListener("change",e=>{if(e.target.files[0])loadDealFile(which,e.target.files[0]);});
+  dnd(z,fs=>{const f=pickDealFile([...fs]);if(f)loadDealFile(which,f);});}
 function bindImg(){const z=$("#imgZone"),inp=$("#imgInput");
   z.addEventListener("click",e=>{if(!e.target.classList.contains("x"))inp.click();});
   inp.addEventListener("change",e=>addImages(e.target.files));dnd(z,fs=>addImages(fs));}
