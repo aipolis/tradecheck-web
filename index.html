@@ -155,10 +155,7 @@ th,td{padding:6px 8px}
 .be{font-size:12px;padding:8px 10px;line-height:1.5}
 .zone{padding:22px 16px}
 .aibox{padding:12px 14px;font-size:13px}
-.thumb{width:52px;height:52px}
-.thumb .x{width:20px;height:20px;line-height:20px;font-size:11px}
-.imgzone.has-imgs{padding:14px 10px 12px}
-.imgzone .thumb-strip{padding:6px}
+.imgzone .thumbs{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 }
 @media(max-width:420px){
 #report .grid,#report .kpi-row{grid-template-columns:repeat(2,1fr)!important}
@@ -173,15 +170,13 @@ th,td{padding:6px 8px}
 .be.off{background:#fff7ed;border:1px solid #f0d9b5;color:#8a5a14}
 .be:not(.on):not(.off){animation:bePulse 1.4s ease-in-out infinite alternate}
 @keyframes bePulse{from{opacity:.55}to{opacity:1}}
-.imgzone .thumb-strip{margin-top:10px;padding:8px;border-radius:10px;background:rgba(46,117,182,.05);border:1px solid rgba(46,117,182,.12)}
-.imgzone .thumbs{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding-bottom:2px}
-.imgzone .thumbs::-webkit-scrollbar{height:4px}
-.imgzone .thumbs::-webkit-scrollbar-thumb{background:#c5d4e8;border-radius:4px}
-.thumb{position:relative;flex:0 0 auto;width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);scroll-snap-align:start}
+.imgzone .thumb-strip{margin-top:10px;padding:8px;border-radius:10px;background:rgba(46,117,182,.05);border:1px solid rgba(46,117,182,.12);width:100%}
+.imgzone .thumbs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;width:100%;align-items:start}
+.thumb{position:relative;width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#fff}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.thumb .idx{position:absolute;left:3px;bottom:3px;min-width:16px;height:16px;padding:0 4px;border-radius:6px;background:rgba(31,78,121,.78);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center}
-.thumb .x{position:absolute;top:2px;right:2px;color:#fff;background:rgba(0,0,0,.55);border-radius:8px;width:18px;height:18px;line-height:18px;text-align:center;font-size:11px;cursor:pointer}
-.imgzone.has-imgs{padding:16px 12px 14px}
+.thumb .idx{position:absolute;left:3px;bottom:3px;min-width:16px;height:16px;padding:0 4px;border-radius:6px;background:rgba(31,78,121,.78);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;z-index:1}
+.thumb .x{position:absolute;top:2px;right:2px;color:#fff;background:rgba(0,0,0,.55);border-radius:8px;width:18px;height:18px;line-height:18px;text-align:center;font-size:11px;cursor:pointer;z-index:2}
+.imgzone.has-imgs{padding:14px 10px 12px}
 .imgzone.has-imgs .zone-icon,.imgzone.has-imgs .hint{display:none}
 .imgzone.has-imgs .ttl{margin-bottom:6px;font-size:14px}
 .imgcount{color:var(--mut);font-size:11.5px;margin-top:6px;line-height:1.45}
@@ -865,8 +860,7 @@ function renderThumbs(){const w=$("#thumbs"),strip=$("#thumbStrip"),z=$("#imgZon
   strip.hidden=!n;
   z.classList.toggle("ok",n>0);
   z.classList.toggle("has-imgs",n>0);
-  $("#imgCount").textContent=n?`已选 ${n} 张 · 左右滑动查看 · 点击空白处继续添加`:"";
-  if(n){w.scrollLeft=w.scrollWidth;}}
+  $("#imgCount").textContent=n?`已选 ${n} 张 · 按顺序拼接 · 点击空白处继续添加`:"";}
 function syncRun(){$("#runBtn").disabled=!(fileDeal||images.length);}
 
 function bindCSV(zone,input,which){const z=$("#"+zone),inp=$("#"+input);

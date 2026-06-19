@@ -182,8 +182,7 @@ function renderThumbs(){const w=$("#thumbs"),strip=$("#thumbStrip"),z=$("#imgZon
   strip.hidden=!n;
   z.classList.toggle("ok",n>0);
   z.classList.toggle("has-imgs",n>0);
-  $("#imgCount").textContent=n?`已选 ${n} 张 · 左右滑动查看 · 点击空白处继续添加`:"";
-  if(n){w.scrollLeft=w.scrollWidth;}}
+  $("#imgCount").textContent=n?`已选 ${n} 张 · 按顺序拼接 · 点击空白处继续添加`:"";}
 function syncRun(){$("#runBtn").disabled=!(fileDeal||images.length);}
 
 function bindCSV(zone,input,which){const z=$("#"+zone),inp=$("#"+input);
