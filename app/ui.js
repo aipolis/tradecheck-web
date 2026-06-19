@@ -208,7 +208,7 @@ function renderReport(R){
   <div class=foot>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
   initCharts(m,d);
 }
-function initCharts(m,d){const G={neg:"#d83a3a",pos:"#178a5a",warn:"#d98a00",ac:"#2e75b6"};
+function initCharts(m,d){const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"}; /* A股:pos=红 neg=绿 */
   Chart.defaults.font.family="Microsoft YaHei, PingFang SC, sans-serif";Chart.defaults.animation=false;
   const mk=(id,cfg)=>{const el=document.getElementById(id);if(el)charts.push(new Chart(el,cfg));};
   mk("holdChart",{type:"bar",data:{labels:Object.keys(m.buckets),datasets:[{data:Object.values(m.buckets),backgroundColor:["#9bd2b0","#7cc49a","#f0c36b","#e89a5a","#d83a3a"]}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});

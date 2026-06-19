@@ -1,5 +1,6 @@
 <!DOCTYPE html><html lang=zh-CN><head><meta charset=utf-8><meta name=viewport content="width=device-width, initial-scale=1"><title>TradeCheck · 交易诊断助手</title><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><style>
-:root{--bg:#f5f7fb;--card:#fff;--ink:#1f2733;--mut:#7a8699;--line:#e6ebf2;--pos:#178a5a;--neg:#d83a3a;--warn:#d98a00;--accent:#1f4e79;--accent2:#2e75b6;}
+:root{--bg:#f5f7fb;--card:#fff;--ink:#1f2733;--mut:#7a8699;--line:#e6ebf2;--pos:#d83a3a;--neg:#178a5a;--warn:#d98a00;--accent:#1f4e79;--accent2:#2e75b6;}
+/* A 股惯例:盈利(--pos)红、亏损(--neg)绿。下方非 P&L 用途的红/绿用硬编码避免被翻转 */
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6}
 .wrap{max-width:980px;margin:0 auto;padding:26px 20px 60px}
@@ -13,18 +14,18 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei
 .zone{background:var(--card);border:2px dashed #c7d2e0;border-radius:14px;padding:30px 20px;text-align:center;cursor:pointer;transition:.15s}
 .zone:hover{border-color:var(--accent2);background:#fbfdff}
 .zone.drag{border-color:var(--accent2);background:#eef5fc}
-.zone.ok{border-style:solid;border-color:var(--pos);background:#f3fbf6}
+.zone.ok{border-style:solid;border-color:#178a5a;background:#f3fbf6}
 .zone .ic{font-size:30px}
 .zone .ttl{font-weight:700;margin:8px 0 4px;font-size:15px}
 .zone .hint{color:var(--mut);font-size:12.5px}
-.zone .fname{margin-top:8px;color:var(--pos);font-size:13px;font-weight:600;word-break:break-all}
-.req{color:var(--neg);font-size:11px}.opt{color:var(--mut);font-size:11px}
+.zone .fname{margin-top:8px;color:#178a5a;font-size:13px;font-weight:600;word-break:break-all}
+.req{color:#d83a3a;font-size:11px}.opt{color:var(--mut);font-size:11px}
 .actions{text-align:center;margin-top:20px}
 .btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 34px;font-size:15px;font-weight:700;cursor:pointer}
 .btn:disabled{background:#b9c3d2;cursor:not-allowed}
 .btn-ghost{background:#fff;color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;margin-left:8px}
 .demo{display:block;margin:14px auto 0;color:var(--accent2);background:none;border:0;cursor:pointer;font-size:13.5px;text-decoration:underline}
-.err{color:var(--neg);text-align:center;margin-top:14px;font-size:14px;min-height:20px}
+.err{color:#d83a3a;text-align:center;margin-top:14px;font-size:14px;min-height:20px}
 .privacy{margin:22px auto 0;max-width:620px;background:#eef5fc;border:1px solid #d7e6f6;border-radius:12px;padding:14px 18px;color:#33506e;font-size:13px;text-align:center}
 .cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:24px}
 .feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
@@ -52,11 +53,11 @@ h2.sec{font-size:18px;margin:26px 0 13px;padding-left:11px;border-left:4px solid
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px}
 .panel h4{margin:0 0 4px;font-size:14px}.panel .sub{margin:0 0 10px;font-size:12px;color:var(--mut)}
 .problem{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--mut);border-radius:12px;margin-bottom:13px;overflow:hidden}
-.problem.sev-critical{border-left-color:var(--neg)}.problem.sev-high{border-left-color:var(--warn)}.problem.sev-medium{border-left-color:var(--accent2)}
+.problem.sev-critical{border-left-color:#d83a3a}.problem.sev-high{border-left-color:var(--warn)}.problem.sev-medium{border-left-color:var(--accent2)}
 .p-head{display:flex;align-items:center;gap:12px;padding:13px 18px;background:#fafbfd;border-bottom:1px solid var(--line)}
 .p-id{font-weight:800;color:var(--mut)}.p-head h3{margin:0;font-size:15.5px;flex:1}
 .sev{font-size:12px;padding:2px 10px;border-radius:20px;color:#fff}
-.sev.sev-critical{background:var(--neg)}.sev.sev-high{background:var(--warn)}.sev.sev-medium{background:var(--accent2)}
+.sev.sev-critical{background:#d83a3a}.sev.sev-high{background:var(--warn)}.sev.sev-medium{background:var(--accent2)}
 .p-body{padding:12px 18px}.p-row{display:flex;gap:14px;padding:7px 0;align-items:flex-start}
 .p-row+.p-row{border-top:1px dashed var(--line)}
 .lab{flex:none;width:72px;font-size:12px;color:#fff;background:var(--accent);border-radius:6px;text-align:center;padding:3px 0;margin-top:2px}
@@ -82,7 +83,7 @@ th{color:var(--mut);font-weight:600;font-size:11.5px}.code{color:var(--mut);font
 .aibox p{margin:6px 0 0}.aibox.warnbox{background:#fff7ed;border-color:#f0d9b5;color:#8a5a14}
 .ai-tag{font-weight:700;color:var(--accent)}
 .ai-tag .mock{background:#9aa6b6;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px}
-.ai-tag .real{background:var(--pos);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px}
+.ai-tag .real{background:#178a5a;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px}
 .disc{margin-top:14px;color:var(--mut);font-size:12px;text-align:center;font-style:italic}
 .btn-busy{opacity:.8}
 </style></head><body>
@@ -601,7 +602,7 @@ function renderReport(R){
   <div class=foot>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
   initCharts(m,d);
 }
-function initCharts(m,d){const G={neg:"#d83a3a",pos:"#178a5a",warn:"#d98a00",ac:"#2e75b6"};
+function initCharts(m,d){const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"}; /* A股:pos=红 neg=绿 */
   Chart.defaults.font.family="Microsoft YaHei, PingFang SC, sans-serif";Chart.defaults.animation=false;
   const mk=(id,cfg)=>{const el=document.getElementById(id);if(el)charts.push(new Chart(el,cfg));};
   mk("holdChart",{type:"bar",data:{labels:Object.keys(m.buckets),datasets:[{data:Object.values(m.buckets),backgroundColor:["#9bd2b0","#7cc49a","#f0c36b","#e89a5a","#d83a3a"]}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
