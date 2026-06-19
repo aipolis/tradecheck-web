@@ -422,10 +422,57 @@ async function probeBackend(){
   if(BACKEND.tc){
     const caps=[];
     caps.push("自动补行情");
-    if(BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv)caps.push("图片 OCR 解析");
+    if(BACKEND.tcCaps&&BACKEND.tcCaps.ocr&&BACKEND.tcCaps.parse_csv)caps.push("图片 OCR 解析(分批)");
+    else if(BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv)caps.push("图片 OCR 解析");
     el.innerHTML="● 后端就绪 — "+caps.join(" · ");
     el.className="be on";
   } else {el.innerHTML="○ 离线模式 — 仅本地规则诊断可用";el.className="be off";}
+}
+
+const OCR_BATCH_SIZE=3; // 每批 3 张,绕开云托管网关单次请求超时/限流
+
+/** 分批 OCR + 单次 LLM 解析(新架构,推荐) */
+async function extractCsvBatched(imageUrls,broker){
+  const allLines=[];let totalOcrLines=0;const perImage=[];
+  const n=imageUrls.length;
+  for(let i=0;i<n;i+=OCR_BATCH_SIZE){
+    const batch=imageUrls.slice(i,i+OCR_BATCH_SIZE);
+    const startIndex=i+1;
+    const endIndex=Math.min(i+OCR_BATCH_SIZE,n);
+    setBusy(true,`正在 OCR 图片 ${startIndex}-${endIndex}/${n}…`);
+    const r=await fetch(apiURL("/api/tradecheck/ocr"),{
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({images:batch,start_index:startIndex,broker:broker||""})
+    });
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.detail||j.error||("OCR 失败 HTTP "+r.status));
+    if(j.lines&&j.lines.length)allLines.push(...j.lines);
+    totalOcrLines+=j.ocr_lines||0;
+    if(j.ocr_per_image)perImage.push(...j.ocr_per_image);
+  }
+  if(!allLines.length)throw new Error("OCR 未提取到任何文字,请检查图片是否清晰");
+  setBusy(true,"正在 AI 解析交割单…");
+  const r2=await fetch(apiURL("/api/tradecheck/parse_csv"),{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({lines:allLines,broker:broker||""})
+  });
+  const j2=await r2.json();
+  if(!r2.ok)throw new Error(j2.detail||j2.error||("解析失败 HTTP "+r2.status));
+  console.log("[parse_csv] OCR 行:",totalOcrLines,"解析交易笔数:",j2.n_rows,"批次数:",Math.ceil(n/OCR_BATCH_SIZE));
+  return {csv:j2.csv,n_rows:j2.n_rows,ocr_lines:totalOcrLines,ocr_per_image:perImage};
+}
+
+/** 旧版一体接口(小图量或后端未升级时的回退) */
+async function extractCsvLegacy(imageUrls,broker){
+  setBusy(true,"正在 OCR + AI 解析图片中的交割单…");
+  const r=await fetch(apiURL("/api/tradecheck/extract_csv"),{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({images:imageUrls,broker:broker||""})
+  });
+  const j=await r.json();
+  if(!r.ok)throw new Error(j.detail||j.error||("图片识别失败 HTTP "+r.status));
+  if(j.n_rows!==undefined)console.log("[extract_csv] OCR 行:",j.ocr_lines,"解析交易笔数:",j.n_rows);
+  return j;
 }
 
 /* 自动从后端拉行情:输入是已 parseDeals 后的交易明细数组,输出 CSV 字符串(供 TC.analyze 第二参) */
@@ -482,19 +529,26 @@ async function run(){$("#err").textContent="";
   try{
     let dealText=fileDeal;
     if(!dealText&&images.length){
-      // 公网部署优先走 mrdk 后端的 /api/tradecheck/extract_csv(RapidOCR + LLM)
-      // 本地开发回退到 server.py 的 /api/extract(图像视觉模型,可选)
-      const useTcOcr=BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv;
+      // 公网部署:优先分批 OCR(/ocr) + 单次 LLM(/parse_csv),绕开网关超时
+      // 回退:旧版一体 /api/tradecheck/extract_csv;本地开发:/api/extract(视觉模型)
+      const useBatchOcr=BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.ocr&&BACKEND.tcCaps.parse_csv;
+      const useTcOcr=useBatchOcr||(BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv);
       if(!useTcOcr&&!BACKEND.ok){
         throw new Error("图片识别需要后端:管理员请在 mrdk 容器里配置 DEEPSEEK_API_KEY 或 ZHIPU_API_KEY,或改用 CSV 交割单上传。");
       }
-      setBusy(true,"正在 OCR + AI 解析图片中的交割单…");
-      const ep=useTcOcr?"/api/tradecheck/extract_csv":"/api/extract";
-      const r=await fetch(apiURL(ep),{method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({images:images.map(i=>i.url)})});
-      const j=await r.json();if(!r.ok)throw new Error(j.detail||j.error||("图片识别失败 HTTP "+r.status));
+      const urls=images.map(i=>i.url);
+      let j;
+      if(useBatchOcr){
+        j=await extractCsvBatched(urls);
+      }else if(useTcOcr){
+        j=await extractCsvLegacy(urls);
+      }else{
+        setBusy(true,"正在 OCR + AI 解析图片中的交割单…");
+        const r=await fetch(apiURL("/api/extract"),{method:"POST",headers:{"content-type":"application/json"},
+          body:JSON.stringify({images:urls})});
+        j=await r.json();if(!r.ok)throw new Error(j.detail||j.error||("图片识别失败 HTTP "+r.status));
+      }
       dealText=j.csv;
-      if(j.n_rows!==undefined){console.log("[extract_csv] OCR 行:",j.ocr_lines,"解析交易笔数:",j.n_rows);}
     }
     if(!dealText)throw new Error("请上传交割单(CSV 或图片)。");
 
