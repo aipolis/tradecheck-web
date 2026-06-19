@@ -1,0 +1,32 @@
+# 真实用户数据 — 严禁上传
+mytrade/
+*我的*.csv
+*real*.csv
+
+# 原型/示例数据 — Cloudflare 不需要
+prototypes/
+samples/
+*打板_*.csv
+*打板接力_*.html
+*模拟*.csv
+*交易诊断报告_样例*.html
+
+# 文档(本地保留)
+*.docx
+docs/PRD*
+交易诊断助手_PRD.*
+
+# 后端调试
+analyze.py
+analyze_real.py
+engine_dabp.py
+requirements.txt
+.cache/
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# 系统
+.DS_Store
+Thumbs.db
