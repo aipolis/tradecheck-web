@@ -175,8 +175,10 @@ th,td{padding:6px 8px}
 .be{font-size:12px;padding:8px 10px;line-height:1.5}
 .zone{padding:22px 16px}
 .aibox{padding:12px 14px;font-size:13px}
-.thumb{width:56px;height:56px}
-.thumb .x{width:22px;height:22px;line-height:22px;font-size:12px}
+.thumb{width:52px;height:52px}
+.thumb .x{width:20px;height:20px;line-height:20px;font-size:11px}
+.imgzone.has-imgs{padding:14px 10px 12px}
+.imgzone .thumb-strip{padding:6px}
 }
 @media(max-width:420px){
 .grid,.kpi-row{grid-template-columns:1fr}
@@ -190,11 +192,18 @@ th,td{padding:6px 8px}
 .be.off{background:#fff7ed;border:1px solid #f0d9b5;color:#8a5a14}
 .be:not(.on):not(.off){animation:bePulse 1.4s ease-in-out infinite alternate}
 @keyframes bePulse{from{opacity:.55}to{opacity:1}}
-.imgzone .thumbs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
-.thumb{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
-.thumb img{width:100%;height:100%;object-fit:cover}
-.thumb .x{position:absolute;top:1px;right:3px;color:#fff;background:rgba(0,0,0,.5);border-radius:10px;width:18px;height:18px;line-height:18px;text-align:center;font-size:11px;cursor:pointer}
-.imgcount{color:var(--mut);font-size:12px;margin-top:6px}
+.imgzone .thumb-strip{margin-top:10px;padding:8px;border-radius:10px;background:rgba(46,117,182,.05);border:1px solid rgba(46,117,182,.12)}
+.imgzone .thumbs{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding-bottom:2px}
+.imgzone .thumbs::-webkit-scrollbar{height:4px}
+.imgzone .thumbs::-webkit-scrollbar-thumb{background:#c5d4e8;border-radius:4px}
+.thumb{position:relative;flex:0 0 auto;width:56px;height:56px;border-radius:8px;overflow:hidden;border:1px solid var(--line);scroll-snap-align:start}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .idx{position:absolute;left:3px;bottom:3px;min-width:16px;height:16px;padding:0 4px;border-radius:6px;background:rgba(31,78,121,.78);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center}
+.thumb .x{position:absolute;top:2px;right:2px;color:#fff;background:rgba(0,0,0,.55);border-radius:8px;width:18px;height:18px;line-height:18px;text-align:center;font-size:11px;cursor:pointer}
+.imgzone.has-imgs{padding:16px 12px 14px}
+.imgzone.has-imgs .zone-icon,.imgzone.has-imgs .hint{display:none}
+.imgzone.has-imgs .ttl{margin-bottom:6px;font-size:14px}
+.imgcount{color:var(--mut);font-size:11.5px;margin-top:6px;line-height:1.45}
 .orsep{display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13px;font-weight:700}
 .aibox{background:#eef5fc;border:1px solid #d7e6f6;border-radius:12px;padding:14px 18px;margin-bottom:14px;font-size:13.5px}
 .aibox p{margin:6px 0 0}.aibox.warnbox{background:#fff7ed;border-color:#f0d9b5;color:#8a5a14}
@@ -236,7 +245,7 @@ UPLOAD = """
       <div class="zone-icon img"><span class=ic>🖼️</span></div>
       <div class=ttl>交割单截图 <span class=opt>支持多张</span></div>
       <div class=hint>手机截的交割单图片，一张拍不全可传多张<br>系统识别并按顺序拼接（需后端）</div>
-      <div class=thumbs id=thumbs></div>
+      <div class=thumb-strip id=thumbStrip hidden><div class=thumbs id=thumbs></div></div>
       <div class=imgcount id=imgCount></div>
       <input type=file id=imgInput accept="image/*" multiple hidden>
     </div>

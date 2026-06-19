@@ -174,19 +174,25 @@ function pickDealFile(files){
 }
 function addImages(files){[...files].forEach(f=>{if(!f.type.startsWith("image/"))return;const rd=new FileReader();
   rd.onload=()=>{images.push({name:f.name,url:rd.result});renderThumbs();syncRun();};rd.readAsDataURL(f);});}
-function renderThumbs(){const w=$("#thumbs");w.innerHTML=images.map((im,i)=>
-  `<div class=thumb><img src="${im.url}"><span class=x data-i=${i}>✕</span></div>`).join("");
-  w.querySelectorAll(".x").forEach(b=>b.onclick=e=>{images.splice(+e.target.dataset.i,1);renderThumbs();syncRun();});
-  $("#imgZone").classList.toggle("ok",images.length>0);
-  $("#imgCount").textContent=images.length?`已选 ${images.length} 张(可继续添加,自动按顺序拼接)`:"";}
+function renderThumbs(){const w=$("#thumbs"),strip=$("#thumbStrip"),z=$("#imgZone");
+  w.innerHTML=images.map((im,i)=>
+  `<div class=thumb><img src="${im.url}" alt=""><span class=idx>${i+1}</span><span class=x data-i=${i}>✕</span></div>`).join("");
+  w.querySelectorAll(".x").forEach(b=>b.onclick=e=>{e.stopPropagation();images.splice(+e.target.dataset.i,1);renderThumbs();syncRun();});
+  const n=images.length;
+  strip.hidden=!n;
+  z.classList.toggle("ok",n>0);
+  z.classList.toggle("has-imgs",n>0);
+  $("#imgCount").textContent=n?`已选 ${n} 张 · 左右滑动查看 · 点击空白处继续添加`:"";
+  if(n){w.scrollLeft=w.scrollWidth;}}
 function syncRun(){$("#runBtn").disabled=!(fileDeal||images.length);}
 
 function bindCSV(zone,input,which){const z=$("#"+zone),inp=$("#"+input);
   z.addEventListener("click",()=>inp.click());
   inp.addEventListener("change",e=>{if(e.target.files[0])loadDealFile(which,e.target.files[0]);});
   dnd(z,fs=>{const f=pickDealFile([...fs]);if(f)loadDealFile(which,f);});}
-function bindImg(){const z=$("#imgZone"),inp=$("#imgInput");
-  z.addEventListener("click",e=>{if(!e.target.classList.contains("x"))inp.click();});
+function bindImg(){const z=$("#imgZone"),inp=$("#imgInput"),strip=$("#thumbStrip");
+  z.addEventListener("click",e=>{if(!e.target.classList.contains("x")&&!e.target.closest(".thumb-strip"))inp.click();});
+  strip.addEventListener("click",e=>e.stopPropagation());
   inp.addEventListener("change",e=>addImages(e.target.files));dnd(z,fs=>addImages(fs));}
 function dnd(z,cb){["dragover","dragenter"].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.add("drag");}));
   ["dragleave","drop"].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.remove("drag");}));
