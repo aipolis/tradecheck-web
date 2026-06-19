@@ -20,6 +20,14 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei
 .zone .hint{color:var(--mut);font-size:12.5px}
 .zone .fname{margin-top:8px;color:#178a5a;font-size:13px;font-weight:600;word-break:break-all}
 .req{color:#d83a3a;font-size:11px}.opt{color:var(--mut);font-size:11px}
+/* 公众号引导卡片 */
+.promo{display:flex;align-items:center;gap:18px;justify-content:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 22px;margin:18px auto 0;max-width:520px}
+.promo .qr{flex:0 0 auto;width:104px;height:104px;display:flex;align-items:center;justify-content:center;border-radius:6px;overflow:hidden;background:#fff}
+.promo .qr img,.promo .qr svg{width:100%;height:100%;display:block;object-fit:contain}
+.promo .txt{flex:1;color:var(--ink);font-size:14px;line-height:1.55}
+.promo .txt .ttl{font-weight:700;color:var(--accent);margin-bottom:2px}
+.promo .txt .sub{color:var(--mut);font-size:12.5px}
+@media (max-width:520px){.promo{flex-direction:column;text-align:center}}
 .actions{text-align:center;margin-top:20px}
 .btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 34px;font-size:15px;font-weight:700;cursor:pointer}
 .btn:disabled{background:#b9c3d2;cursor:not-allowed}
@@ -122,6 +130,12 @@ th{color:var(--mut);font-weight:600;font-size:11.5px}.code{color:var(--mut);font
     <button class=demo id=demoBtn>没有文件?用示例账户(打板接力)体验 →</button>
   </div>
   <div class=err id=err></div>
+  <div class=promo>
+    <div class=qr><svg width=110 height=110 viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg"><rect width=110 height=110 fill="#f5f7fb" stroke="#c7d2e0" stroke-dasharray="4 4"/><text x=55 y=48 text-anchor=middle font-size=11 fill="#7a8699">公众号</text><text x=55 y=64 text-anchor=middle font-size=11 fill="#7a8699">二维码</text><text x=55 y=82 text-anchor=middle font-size=9 fill="#aab3c2">(待替换)</text></svg></div>
+    <div class=txt><div class=ttl>关注「量化新手村」公众号</div>
+      <div>获取更多散户量化复盘技巧、TradeCheck 使用案例与策略迭代笔记。</div>
+      <div class=sub>扫码或在微信搜「量化新手村」</div></div>
+  </div>
   <div class=privacy>🔒 <b>隐私</b>:① CSV 交割单<b>仅在本地解析</b>,不外传;② AI 文字诊断只上传<b>已脱敏的统计指标</b>(非原始成交明细);③ 图片识别会把<b>截图发送给所配置的视觉模型</b>转写文字——介意的用户可改用 CSV。后端与模型均由你自行部署/配置。</div>
   <div class=cols>
     <div class=feat><h4>① 自动识别风格</h4><p>超短 / 打板接力 / 低吸 / 波段 / 价投,自动判定并采用对应评价标尺。</p></div>
