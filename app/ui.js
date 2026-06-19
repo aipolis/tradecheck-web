@@ -176,7 +176,10 @@ function addImages(files){[...files].forEach(f=>{if(!f.type.startsWith("image/")
   rd.onload=()=>{images.push({name:f.name,url:rd.result});renderThumbs();syncRun();};rd.readAsDataURL(f);});}
 function renderThumbs(){const w=$("#thumbs"),strip=$("#thumbStrip"),z=$("#imgZone");
   w.innerHTML=images.map((im,i)=>
-  `<div class=thumb title="${im.name.replace(/"/g,"&quot;")}"><span class=thumb-num>${i+1}</span><span class=x data-i=${i}>✕</span></div>`).join("");
+  `<span class=thumb title="${im.name.replace(/"/g,"&quot;")}">${i+1}<span class=x data-i=${i}>✕</span></span>`).join("");
+  w.style.display=images.length?"block":"none";
+  w.style.width="100%";
+  w.style.textAlign="center";
   w.querySelectorAll(".x").forEach(b=>b.onclick=e=>{e.stopPropagation();images.splice(+e.target.dataset.i,1);renderThumbs();syncRun();});
   const n=images.length;
   strip.hidden=!n;

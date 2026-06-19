@@ -205,11 +205,10 @@ th,td{padding:6px 8px}
 .be.off{background:#fff7ed;border:1px solid #f0d9b5;color:#8a5a14}
 .be:not(.on):not(.off){animation:bePulse 1.4s ease-in-out infinite alternate}
 @keyframes bePulse{from{opacity:.55}to{opacity:1}}
-.imgzone .thumb-strip{margin-top:10px;padding:8px;border-radius:10px;background:rgba(46,117,182,.05);border:1px solid rgba(46,117,182,.12);width:100%;box-sizing:border-box}
-.imgzone .thumbs{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;align-content:flex-start}
-.thumb{position:relative;-webkit-flex:0 0 52px;flex:0 0 52px;width:52px;height:52px;border-radius:8px;border:1px solid #c5d4e8;background:linear-gradient(145deg,#eef4fb,#dceaf8);display:-webkit-flex;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
-.thumb-num{font-size:16px;font-weight:800;color:var(--accent2);line-height:1;user-select:none;pointer-events:none}
-.thumb .x{position:absolute;top:-4px;right:-4px;color:#fff;background:rgba(0,0,0,.6);border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;font-size:11px;cursor:pointer;z-index:2}
+.imgzone .thumb-strip{margin-top:10px;padding:6px 4px;border-radius:10px;background:rgba(46,117,182,.05);border:1px solid rgba(46,117,182,.12);width:100%;box-sizing:border-box;overflow:hidden}
+#imgZone #thumbs{display:block!important;width:100%!important;text-align:center!important;line-height:0!important;font-size:0!important;letter-spacing:0!important}
+#imgZone #thumbs .thumb{display:inline-block!important;vertical-align:top!important;width:52px!important;height:52px!important;margin:4px!important;position:relative;border-radius:8px;border:1px solid #c5d4e8;background:linear-gradient(145deg,#eef4fb,#dceaf8);box-sizing:border-box;text-align:center!important;line-height:52px!important;font-size:16px!important;font-weight:800;color:var(--accent2)}
+#imgZone #thumbs .thumb .x{position:absolute;top:-5px;right:-5px;line-height:18px!important;font-size:11px!important;font-weight:400;color:#fff;background:rgba(0,0,0,.65);border-radius:50%;width:18px;height:18px;text-align:center;cursor:pointer;z-index:2}
 .imgzone.has-imgs{padding:14px 10px 12px}
 .imgzone.has-imgs .zone-icon,.imgzone.has-imgs .hint{display:none!important}
 .imgzone.has-imgs .ttl{margin-bottom:6px;font-size:14px}
