@@ -1,0 +1,18 @@
+---
+description: TradeCheck 改完代码后自动 commit 并 push 触发 Cloudflare 部署
+globs: TradeCheck/**/*
+alwaysApply: false
+---
+
+# TradeCheck 自动 Push
+
+完成 TradeCheck 相关实现、修复或样式改动后，**无需用户再说 push**，在任务结束时自动：
+
+1. `git add` 相关文件（不含 `.claude/`、密钥、`.env`）
+2. 写简洁 commit message（说明 why）
+3. `git push origin main`（GitHub 直连；镜像 502 时换 `https://github.com/aipolis/tradecheck-web.git`）
+4. 告知用户 commit hash 与部署说明
+
+若 `app/ui.js` 或 `app/engine.js` 有改动，记得运行 `python app/build_app.py` 再提交生成的 HTML。
+
+无实质改动时不提交空 commit。
