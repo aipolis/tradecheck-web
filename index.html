@@ -2,13 +2,17 @@
 :root{--bg:#f0f4fa;--card:#fff;--ink:#1f2733;--mut:#7a8699;--line:#e6ebf2;--pos:#d83a3a;--neg:#178a5a;--warn:#d98a00;--accent:#1f4e79;--accent2:#2e75b6;--shadow:0 4px 24px rgba(31,78,121,.08);--shadow-lg:0 12px 40px rgba(31,78,121,.14);}
 /* A 股惯例:盈利(--pos)红、亏损(--neg)绿。下方非 P&L 用途的红/绿用硬编码避免被翻转 */
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{margin:0;background:linear-gradient(165deg,#e8eef6 0%,var(--bg) 45%,#f5f7fb 100%);background-attachment:scroll;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-html{height:auto}
-#report{display:none;overflow:visible;height:auto;min-height:0}
-body.report-mode{overflow-y:auto;height:auto;min-height:100%}
-body.report-mode #upload{display:none!important}
-body.report-mode #report{display:block!important;height:auto!important;overflow:visible!important;padding-bottom:max(72px,env(safe-area-inset-bottom))}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;height:auto;overflow-y:scroll}
+body{margin:0;background:linear-gradient(165deg,#e8eef6 0%,var(--bg) 45%,#f5f7fb 100%);background-attachment:scroll;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+#report{display:none;overflow:visible;height:auto;min-height:0;position:relative}
+body.report-mode{overflow-x:hidden!important;overflow-y:auto!important;height:auto!important;min-height:0!important;max-height:none!important;-webkit-overflow-scrolling:touch}
+body.report-mode #report{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;padding-bottom:max(96px,env(safe-area-inset-bottom))}
+body.report-mode #report .foot{margin-bottom:32px;padding-bottom:16px}
+body.report-mode #report .checklist{margin-bottom:8px}
+@media(max-width:760px){
+body.report-mode #report{padding-bottom:max(120px,env(safe-area-inset-bottom))}
+#report .panel,#report .problem,#report .checklist,#report .scorewrap,#report .idbox{overflow:visible}
+}
 .wrap{max-width:980px;margin:0 auto;padding:26px 20px 60px;width:100%;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:max(60px,env(safe-area-inset-bottom))}
 /* 上传页 */
 .home{padding-top:4px}
@@ -196,7 +200,7 @@ th,td{padding:6px 8px}
 .ai-tag .real{background:#178a5a;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px}
 .disc{margin-top:14px;color:var(--mut);font-size:12px;text-align:center;font-style:italic}
 .btn-busy{opacity:.8}
-</style></head><body>
+</style></head><body><div id=report class=wrap style=display:none></div>
 <div id=upload class="wrap home">
   <div class=up-hero>
     <div class=hero-strip>
@@ -252,7 +256,6 @@ th,td{padding:6px 8px}
     <div class=feat><div class=feat-num>3</div><h4>规则 + AI 诊断</h4><p>规则引擎找出核心问题；接入后端时 AI 可润色小结与建议。</p></div>
   </div>
 </div>
-<div id=report class=wrap style=display:none></div>
 <script>window.TRADECHECK_BACKEND='https://mingri-api-260693-8-1435576840.sh.run.tcloudbase.com';</script><script>/* TradeCheck 诊断引擎(纯函数;Node 可测、浏览器可用)
    流程:解析交割单(+可选行情) → FIFO 配对 → 风格识别 → 指标 → 规则化诊断 */
 (function(root){
@@ -945,7 +948,8 @@ async function run(){$("#err").textContent="";
             sev:(R.diagnoses[i]&&R.diagnoses[i].sev)||"high",title:p.title,evidence:p.evidence,harm:p.harm,fixes:p.fixes||[]}));
       }catch(e){console.warn("[diagnose]",e.message);}
     }
-    $("#upload").style.display="none";$("#report").style.display="block";renderReport(R);window.scrollTo(0,0);
+    enterReportView();
+    renderReport(R);window.scrollTo(0,0);
   }catch(e){$("#err").textContent="⚠ "+e.message;}
   finally{setBusy(false);}
 }
@@ -974,9 +978,36 @@ function scheduleChartResize(){
 }
 function bindChartResize(){
   if(chartResizeHandler)window.removeEventListener("resize",chartResizeHandler);
-  chartResizeHandler=()=>scheduleChartResize();
+  chartResizeHandler=()=>{scheduleChartResize();unlockReportScroll();};
   window.addEventListener("resize",chartResizeHandler);
   if(window.visualViewport)window.visualViewport.addEventListener("resize",chartResizeHandler);
+}
+function enterReportView(){
+  document.body.classList.add("report-mode");
+  const up=$("#upload");
+  if(up)up.remove();
+  const rep=$("#report");
+  rep.style.display="block";
+  rep.style.height="auto";
+  rep.style.overflow="visible";
+  unlockReportScroll();
+}
+function unlockReportScroll(){
+  const html=document.documentElement,body=document.body,rep=$("#report");
+  html.style.height="auto";
+  html.style.overflowY="auto";
+  body.style.height="auto";
+  body.style.overflowY="auto";
+  body.style.overflowX="hidden";
+  body.style.maxHeight="none";
+  if(rep){
+    rep.style.height="auto";
+    rep.style.maxHeight="none";
+    void rep.offsetHeight;
+    const sh=Math.max(rep.scrollHeight,rep.offsetHeight)+48;
+    body.style.minHeight=sh+"px";
+    html.style.minHeight=sh+"px";
+  }
 }
 
 function kpiCard(t,v,cls,s){return `<div class=kpi><div class=t>${t}</div><div class="v ${cls}">${v}</div><div class=s>${s}</div></div>`;}
@@ -1047,13 +1078,13 @@ function renderReport(R){
   <h2 class=sec>问题诊断与整改建议</h2>${aiHtml}${probHtml}
   <h2 class=sec>整改清单(可逐项打勾)</h2><div class=checklist>${checkHtml}</div>
   ${R.ai&&R.ai.disclaimer?`<div class=disc>${R.ai.disclaimer}</div>`:""}
-  <div class=foot>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
-  document.body.classList.add("report-mode");
-  $("#report").style.display="block";
-  $("#report").style.height="auto";
+  <div class=foot id=reportEnd>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
   initCharts(m,d);
   scheduleChartResize();
   bindChartResize();
+  unlockReportScroll();
+  setTimeout(unlockReportScroll,150);
+  setTimeout(()=>{scheduleChartResize();unlockReportScroll();},400);
 }
 function initCharts(m,d){
   const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"};

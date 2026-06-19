@@ -27,13 +27,17 @@ CSS = """
 :root{--bg:#f0f4fa;--card:#fff;--ink:#1f2733;--mut:#7a8699;--line:#e6ebf2;--pos:#d83a3a;--neg:#178a5a;--warn:#d98a00;--accent:#1f4e79;--accent2:#2e75b6;--shadow:0 4px 24px rgba(31,78,121,.08);--shadow-lg:0 12px 40px rgba(31,78,121,.14);}
 /* A 股惯例:盈利(--pos)红、亏损(--neg)绿。下方非 P&L 用途的红/绿用硬编码避免被翻转 */
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{margin:0;background:linear-gradient(165deg,#e8eef6 0%,var(--bg) 45%,#f5f7fb 100%);background-attachment:scroll;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-html{height:auto}
-#report{display:none;overflow:visible;height:auto;min-height:0}
-body.report-mode{overflow-y:auto;height:auto;min-height:100%}
-body.report-mode #upload{display:none!important}
-body.report-mode #report{display:block!important;height:auto!important;overflow:visible!important;padding-bottom:max(72px,env(safe-area-inset-bottom))}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;height:auto;overflow-y:scroll}
+body{margin:0;background:linear-gradient(165deg,#e8eef6 0%,var(--bg) 45%,#f5f7fb 100%);background-attachment:scroll;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+#report{display:none;overflow:visible;height:auto;min-height:0;position:relative}
+body.report-mode{overflow-x:hidden!important;overflow-y:auto!important;height:auto!important;min-height:0!important;max-height:none!important;-webkit-overflow-scrolling:touch}
+body.report-mode #report{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;padding-bottom:max(96px,env(safe-area-inset-bottom))}
+body.report-mode #report .foot{margin-bottom:32px;padding-bottom:16px}
+body.report-mode #report .checklist{margin-bottom:8px}
+@media(max-width:760px){
+body.report-mode #report{padding-bottom:max(120px,env(safe-area-inset-bottom))}
+#report .panel,#report .problem,#report .checklist,#report .scorewrap,#report .idbox{overflow:visible}
+}
 .wrap{max-width:980px;margin:0 auto;padding:26px 20px 60px;width:100%;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:max(60px,env(safe-area-inset-bottom))}
 /* 上传页 */
 .home{padding-top:4px}
@@ -279,7 +283,6 @@ UPLOAD = """
     <div class=feat><div class=feat-num>3</div><h4>规则 + AI 诊断</h4><p>规则引擎找出核心问题；接入后端时 AI 可润色小结与建议。</p></div>
   </div>
 </div>
-<div id=report class=wrap style=display:none></div>
 """
 
 import os
@@ -292,7 +295,7 @@ html = ("<!DOCTYPE html><html lang=zh-CN><head><meta charset=utf-8>"
 "<title>TradeCheck · 交易诊断助手</title>"
 "<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js\"></script>"
 "<script src=\"https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js\"></script>"
-"<style>"+CSS+"</style></head><body>"+UPLOAD+
+"<style>"+CSS+"</style></head><body><div id=report class=wrap style=display:none></div>"+UPLOAD+
 "<script>window.TRADECHECK_BACKEND="+repr(BACKEND_URL)+";</script>"
 "<script>"+eng+"</script>"
 "<script>function __b64u(b){return decodeURIComponent(Array.prototype.map.call(atob(b),c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));}"

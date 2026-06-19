@@ -259,7 +259,8 @@ async function run(){$("#err").textContent="";
             sev:(R.diagnoses[i]&&R.diagnoses[i].sev)||"high",title:p.title,evidence:p.evidence,harm:p.harm,fixes:p.fixes||[]}));
       }catch(e){console.warn("[diagnose]",e.message);}
     }
-    $("#upload").style.display="none";$("#report").style.display="block";renderReport(R);window.scrollTo(0,0);
+    enterReportView();
+    renderReport(R);window.scrollTo(0,0);
   }catch(e){$("#err").textContent="⚠ "+e.message;}
   finally{setBusy(false);}
 }
@@ -288,9 +289,36 @@ function scheduleChartResize(){
 }
 function bindChartResize(){
   if(chartResizeHandler)window.removeEventListener("resize",chartResizeHandler);
-  chartResizeHandler=()=>scheduleChartResize();
+  chartResizeHandler=()=>{scheduleChartResize();unlockReportScroll();};
   window.addEventListener("resize",chartResizeHandler);
   if(window.visualViewport)window.visualViewport.addEventListener("resize",chartResizeHandler);
+}
+function enterReportView(){
+  document.body.classList.add("report-mode");
+  const up=$("#upload");
+  if(up)up.remove();
+  const rep=$("#report");
+  rep.style.display="block";
+  rep.style.height="auto";
+  rep.style.overflow="visible";
+  unlockReportScroll();
+}
+function unlockReportScroll(){
+  const html=document.documentElement,body=document.body,rep=$("#report");
+  html.style.height="auto";
+  html.style.overflowY="auto";
+  body.style.height="auto";
+  body.style.overflowY="auto";
+  body.style.overflowX="hidden";
+  body.style.maxHeight="none";
+  if(rep){
+    rep.style.height="auto";
+    rep.style.maxHeight="none";
+    void rep.offsetHeight;
+    const sh=Math.max(rep.scrollHeight,rep.offsetHeight)+48;
+    body.style.minHeight=sh+"px";
+    html.style.minHeight=sh+"px";
+  }
 }
 
 function kpiCard(t,v,cls,s){return `<div class=kpi><div class=t>${t}</div><div class="v ${cls}">${v}</div><div class=s>${s}</div></div>`;}
@@ -361,13 +389,13 @@ function renderReport(R){
   <h2 class=sec>问题诊断与整改建议</h2>${aiHtml}${probHtml}
   <h2 class=sec>整改清单(可逐项打勾)</h2><div class=checklist>${checkHtml}</div>
   ${R.ai&&R.ai.disclaimer?`<div class=disc>${R.ai.disclaimer}</div>`:""}
-  <div class=foot>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
-  document.body.classList.add("report-mode");
-  $("#report").style.display="block";
-  $("#report").style.height="auto";
+  <div class=foot id=reportEnd>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
   initCharts(m,d);
   scheduleChartResize();
   bindChartResize();
+  unlockReportScroll();
+  setTimeout(unlockReportScroll,150);
+  setTimeout(()=>{scheduleChartResize();unlockReportScroll();},400);
 }
 function initCharts(m,d){
   const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"};
