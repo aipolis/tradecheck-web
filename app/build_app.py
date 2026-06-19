@@ -28,47 +28,62 @@ CSS = """
 /* A 股惯例:盈利(--pos)红、亏损(--neg)绿。下方非 P&L 用途的红/绿用硬编码避免被翻转 */
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{margin:0;background:#f3f5f9;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{margin:0;background:linear-gradient(165deg,#e8eef6 0%,var(--bg) 45%,#f5f7fb 100%);background-attachment:fixed;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 .wrap{max-width:980px;margin:0 auto;padding:26px 20px 60px;width:100%;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:max(60px,env(safe-area-inset-bottom))}
 /* 上传页 */
-.home{max-width:680px;padding-top:10px}
-.site-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:36px}
-.brand-mark{display:inline-flex;align-items:center;gap:9px;color:var(--accent);font-weight:800;font-size:15px;letter-spacing:.04em}
-.brand-mark .dot{width:8px;height:8px;border-radius:2px;background:var(--accent2);box-shadow:0 0 0 3px rgba(46,117,182,.15)}
-.site-head .be{margin:0;max-width:none;flex:0 1 auto;font-size:11.5px;padding:5px 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hero-copy{text-align:center;margin-bottom:32px}
-.hero-copy h1{margin:0 0 10px;font-size:clamp(28px,6vw,38px);font-weight:800;line-height:1.2;letter-spacing:-.03em;color:var(--ink)}
-.hero-copy p{margin:0;color:var(--mut);font-size:15px;line-height:1.65;letter-spacing:.01em}
-.upload-sec{margin-top:0}
-.zones{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0}
-.zone{background:var(--card);border:1.5px dashed #cfd8e6;border-radius:14px;padding:26px 18px 22px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s,box-shadow .2s,transform .15s}
-.zone:hover{border-color:var(--accent2);border-style:solid;background:#fcfdff;box-shadow:0 8px 28px rgba(31,78,121,.08);transform:translateY(-1px)}
-.zone.drag{border-color:var(--accent2);border-style:solid;background:#f8fbff;box-shadow:0 8px 24px rgba(46,117,182,.12)}
-.zone.ok{border-color:#7cc49a;border-style:solid;background:#f8fdf9;box-shadow:0 4px 16px rgba(23,138,90,.08)}
-.zone-icon{width:46px;height:46px;margin:0 auto 12px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1}
-.zone-icon.file{background:#eef4fb;color:var(--accent2)}
-.zone-icon.img{background:#f7f2ea;color:#b8860b}
-.zone .ic{font-size:22px;line-height:1}
-.zone .ttl{font-weight:700;margin:0 0 4px;font-size:15px;color:var(--ink)}
-.zone .hint{color:var(--mut);font-size:12px;line-height:1.5}
-.zone .fname{margin-top:10px;color:#178a5a;font-size:12.5px;font-weight:600;word-break:break-all;padding:5px 10px;background:rgba(23,138,90,.07);border-radius:8px;display:inline-block;max-width:100%}
+.home{padding-top:4px}
+.up-hero{text-align:center;padding:0 0 8px}
+.hero-strip{position:relative;overflow:hidden;background:linear-gradient(135deg,#1a4570 0%,#1f4e79 55%,#2e75b6 100%);color:#fff;border-radius:16px;padding:18px 24px 16px;box-shadow:0 8px 28px rgba(31,78,121,.18)}
+.hero-strip::after{content:"";position:absolute;width:180px;height:180px;right:-50px;top:-70px;background:radial-gradient(circle,rgba(255,255,255,.12) 0%,transparent 70%);pointer-events:none}
+.hero-strip>*{position:relative;z-index:1}
+.up-hero .logo{display:inline-flex;align-items:center;gap:8px;color:rgba(255,255,255,.92);font-weight:700;font-size:14px;letter-spacing:.02em}
+.up-hero .logo .dot{width:9px;height:9px;border-radius:3px;background:#8fd0ff;box-shadow:0 0 8px rgba(143,208,255,.5)}
+.hero-strip h1{margin:10px 0 0;font-size:clamp(20px,4.5vw,28px);font-weight:800;line-height:1.32;letter-spacing:-.02em}
+.hero-body{max-width:560px;margin:18px auto 0;padding:0 4px}
+.hero-body .intro{margin:0;color:#4a5568;font-size:14.5px;line-height:1.7}
+.hero-tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0 0}
+.htag{font-size:12px;padding:6px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--accent);box-shadow:0 1px 6px rgba(31,39,51,.05);font-weight:600}
+.home .be{margin:14px auto 0;max-width:480px}
+.upload-sec{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 20px 20px;margin-top:22px;box-shadow:var(--shadow)}
+.sec-label{text-align:center;font-size:13px;font-weight:700;color:var(--accent);margin:0 0 16px;letter-spacing:.06em;text-transform:none}
+.sec-label::before,.sec-label::after{content:"";display:inline-block;width:28px;height:1px;background:linear-gradient(90deg,transparent,var(--line));vertical-align:middle;margin:0 10px}
+.sec-label::after{background:linear-gradient(90deg,var(--line),transparent)}
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 8px}
+.zone{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 20px 24px;text-align:center;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .15s;box-shadow:0 2px 12px rgba(31,39,51,.04)}
+.zone:hover{border-color:#b8d4f0;box-shadow:0 10px 28px rgba(46,117,182,.12);transform:translateY(-2px)}
+.zone.drag{border-color:var(--accent2);background:#f8fbff;box-shadow:0 10px 32px rgba(46,117,182,.16)}
+.zone.ok{border-color:#7cc49a;background:linear-gradient(180deg,#f8fdf9,#f0faf3);box-shadow:0 4px 16px rgba(23,138,90,.1)}
+.zone-icon{width:54px;height:54px;margin:0 auto 14px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:26px;line-height:1}
+.zone-icon.file{background:linear-gradient(145deg,#eef5fc,#dceaf8)}
+.zone-icon.img{background:linear-gradient(145deg,#fff8ef,#fdebd4)}
+.zone .ic{font-size:26px}
+.zone .ttl{font-weight:700;margin:0 0 6px;font-size:15px;color:var(--ink)}
+.zone .hint{color:var(--mut);font-size:12.5px;line-height:1.55}
+.zone .fname{margin-top:10px;color:#178a5a;font-size:13px;font-weight:600;word-break:break-all;padding:6px 10px;background:rgba(23,138,90,.08);border-radius:8px;display:inline-block;max-width:100%}
 .req{color:#d83a3a;font-size:11px}.opt{color:var(--mut);font-size:11px;font-weight:400}
-.home-foot{margin-top:36px;padding-top:24px;border-top:1px solid var(--line);text-align:center}
-.promo-mini{display:inline-flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 16px 10px 10px;max-width:100%;text-align:left}
-.promo-mini .qr{flex:0 0 auto;width:72px;height:72px;display:flex;align-items:center;justify-content:center;border-radius:8px;overflow:hidden;background:#fff;border:1px solid var(--line)}
-.promo-mini .qr img,.promo-mini .qr svg{width:100%;height:100%;display:block;object-fit:contain}
-.promo-mini .txt{font-size:13px;color:var(--ink);line-height:1.5}
-.promo-mini .txt b{color:var(--accent);font-weight:700}
-.foot-note{margin:14px 0 0;color:#9aa6b6;font-size:11.5px;line-height:1.6}
-.actions{text-align:center;margin-top:24px;padding:0;display:flex;flex-direction:column;align-items:center;gap:10px}
-.btn{background:linear-gradient(135deg,#1a4570,#2e75b6);color:#fff;border:0;border-radius:999px;padding:14px 48px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(31,78,121,.22);transition:transform .15s,box-shadow .15s,opacity .15s;letter-spacing:.03em;min-width:220px}
+/* 公众号引导卡片 */
+.promo{display:flex;align-items:center;gap:18px;justify-content:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 24px;margin:22px auto 0;max-width:520px;box-shadow:0 4px 20px rgba(31,39,51,.06)}
+.promo .qr{flex:0 0 auto;width:104px;height:104px;display:flex;align-items:center;justify-content:center;border-radius:12px;overflow:hidden;background:#fff;border:1px solid var(--line)}
+.promo .qr img,.promo .qr svg{width:100%;height:100%;display:block;object-fit:contain}
+.promo .txt{flex:1;color:var(--ink);font-size:14px;line-height:1.55}
+.promo .txt .ttl{font-weight:700;color:var(--accent);margin-bottom:4px;font-size:15px}
+.promo .txt .sub{color:var(--mut);font-size:12.5px;margin-top:4px}
+@media (max-width:520px){.promo{flex-direction:column;text-align:center;padding:16px 18px}}
+.actions{text-align:center;margin-top:22px;padding:0 4px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.btn{background:linear-gradient(135deg,#1a4570,#2e75b6);color:#fff;border:0;border-radius:12px;padding:14px 40px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(31,78,121,.28);transition:transform .15s,box-shadow .15s,opacity .15s;letter-spacing:.02em}
 .btn:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(31,78,121,.32)}
 .btn:not(:disabled):active{transform:translateY(0);box-shadow:0 3px 12px rgba(31,78,121,.25)}
 .btn:disabled{background:linear-gradient(135deg,#b9c3d2,#c5ced9);box-shadow:none;cursor:not-allowed;opacity:.85}
 .btn-ghost{background:#fff;color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;margin-left:0}
 .demo{display:inline-block;margin:0;color:var(--accent2);background:transparent;border:0;border-radius:999px;cursor:pointer;font-size:13px;padding:6px 14px;text-decoration:none;transition:color .15s,background .15s}
 .demo:hover{color:var(--accent);background:rgba(46,117,182,.08)}
-.err{color:#d83a3a;text-align:center;margin-top:12px;font-size:13px;min-height:18px;padding:0}
+.err{color:#d83a3a;text-align:center;margin-top:14px;font-size:14px;min-height:20px;padding:0 8px}
+.privacy{margin:24px auto 0;max-width:620px;background:linear-gradient(180deg,#f8fbff,#eef5fc);border:1px solid #d7e6f6;border-radius:14px;padding:16px 20px;color:#33506e;font-size:13px;text-align:left;line-height:1.65;box-shadow:0 2px 12px rgba(51,80,110,.05)}
+.cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:28px}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 16px;box-shadow:0 2px 10px rgba(31,39,51,.04);transition:box-shadow .2s,transform .15s}
+.feat:hover{box-shadow:0 8px 24px rgba(31,39,51,.08);transform:translateY(-2px)}
+.feat-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#eef5fc,#dceaf8);color:var(--accent2);font-size:12px;font-weight:800;margin-bottom:10px}
+.feat h4{margin:0 0 6px;font-size:14px;color:var(--accent);font-weight:700}.feat p{margin:0;color:var(--mut);font-size:12.5px;line-height:1.55}
 /* 报告 */
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:12px;flex-wrap:wrap}
 .topbar>div:last-child{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -116,13 +131,17 @@ th{color:var(--mut);font-weight:600;font-size:11.5px}.code{color:var(--mut);font
 .foot{margin-top:26px;color:var(--mut);font-size:12px;text-align:center;line-height:1.7}
 @media(max-width:760px){
 .wrap{padding:16px max(14px,env(safe-area-inset-right)) max(48px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
-.site-head{margin-bottom:24px;flex-wrap:wrap}
-.site-head .be{flex:1 1 100%;text-align:center;white-space:normal}
-.hero-copy{margin-bottom:24px}
-.hero-copy h1{font-size:26px}
-.hero-copy p{font-size:14px}
-.promo-mini{flex-direction:column;text-align:center;padding:12px}
-.zones,.charts,.checklist{grid-template-columns:1fr}
+.up-hero{padding:0 0 4px}
+.hero-strip{padding:16px 18px 14px;border-radius:14px}
+.hero-strip h1{font-size:20px;margin-top:8px}
+.hero-body{margin-top:14px}
+.hero-body .intro{font-size:13.5px;line-height:1.65}
+.hero-tags{gap:6px;margin-top:12px}
+.htag{font-size:11px;padding:5px 11px}
+.upload-sec{padding:18px 14px 16px;margin-top:18px;border-radius:14px}
+.sec-label{font-size:12px;margin-bottom:14px}
+.sec-label::before,.sec-label::after{width:18px;margin:0 8px}
+.zones,.cols,.charts,.checklist{grid-template-columns:1fr}
 .grid{grid-template-columns:repeat(2,1fr);gap:8px}
 .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px}
 .scorewrap{flex-direction:column;text-align:center;padding:16px 14px;gap:14px}
@@ -152,7 +171,8 @@ th,td{padding:6px 8px}
 .kpi .t,.kpi .s{font-size:11px}
 .btn{display:block;width:100%;max-width:360px;margin:0 auto;padding:14px 20px;font-size:16px}
 .demo{font-size:12.5px;padding:4px 10px;line-height:1.5;max-width:100%}
-.be{font-size:11px;padding:6px 10px;line-height:1.45}
+.privacy{font-size:12px;padding:12px 14px;text-align:left;line-height:1.6}
+.be{font-size:12px;padding:8px 10px;line-height:1.5}
 .zone{padding:22px 16px}
 .aibox{padding:12px 14px;font-size:13px}
 .thumb{width:56px;height:56px}
@@ -161,7 +181,7 @@ th,td{padding:6px 8px}
 @media(max-width:420px){
 .grid,.kpi-row{grid-template-columns:1fr}
 .topbar .btn-ghost{flex:1 1 100%}
-.hero-copy h1{font-size:24px}
+.hero-strip h1{font-size:19px}
 }
 @media print{.topbar{display:none}body{background:#fff}}
 /* 多图 + 后端状态 + AI */
@@ -187,45 +207,59 @@ th,td{padding:6px 8px}
 
 UPLOAD = """
 <div id=upload class="wrap home">
-  <header class=site-head>
-    <div class=brand-mark><span class=dot></span>TradeCheck</div>
-    <div class=be id=beStatus>检测后端中…</div>
-  </header>
-  <div class=hero-copy>
-    <h1>交易诊断报告</h1>
-    <p>上传交割单，识别风格、定位问题、给出改进方向</p>
+  <div class=up-hero>
+    <div class=hero-strip>
+      <div class=logo><span class=dot></span>TradeCheck · 交易诊断助手</div>
+      <h1>上传交割单，生成交易诊断报告</h1>
+    </div>
+    <div class=hero-body>
+      <p class=intro>AI 帮你复盘交易行为：识别风格、找出问题、给出整改建议。交割单在本地解析，数据不外传。</p>
+      <div class=hero-tags>
+        <span class=htag>🔒 本地解析</span>
+        <span class=htag>📊 确定性指标</span>
+        <span class=htag>🎯 风格感知</span>
+      </div>
+      <div class=be id=beStatus>检测后端中…</div>
+    </div>
   </div>
   <div class=upload-sec>
+  <p class=sec-label>选择上传方式</p>
   <div class=zones>
     <div class=zone id=dealZone>
       <div class="zone-icon file"><span class=ic>📄</span></div>
-      <div class=ttl>文件上传</div>
-      <div class=hint>CSV · Excel<br>券商导出的成交记录</div>
+      <div class=ttl>交割单 CSV / Excel</div>
+      <div class=hint>券商导出的成交记录（.csv / .xlsx / .xls）<br>含日期、代码、买卖、价格、数量</div>
       <div class=fname id=dealName></div>
       <input type=file id=dealInput accept=".csv,.txt,.xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
     </div>
     <div class=zone imgzone id=imgZone>
-      <div class="zone-icon img"><span class=ic>🖼</span></div>
-      <div class=ttl>截图上传</div>
-      <div class=hint>支持多张 · OCR 识别<br>一张拍不全可分批上传</div>
+      <div class="zone-icon img"><span class=ic>🖼️</span></div>
+      <div class=ttl>交割单截图 <span class=opt>支持多张</span></div>
+      <div class=hint>手机截的交割单图片，一张拍不全可传多张<br>系统识别并按顺序拼接（需后端）</div>
       <div class=thumbs id=thumbs></div>
       <div class=imgcount id=imgCount></div>
       <input type=file id=imgInput accept="image/*" multiple hidden>
     </div>
   </div>
+  <!-- 日线行情上传区已删除:行情由后端 /api/tradecheck/build_market_csv 自动补齐,用户无需上传 -->
   <div class=actions>
     <button class=btn id=runBtn disabled>生成诊断报告</button>
-    <button class=demo id=demoBtn>暂无文件？试用示例账户 →</button>
+    <button class=demo id=demoBtn>没有文件？用示例账户（打板接力）体验 →</button>
   </div>
   <div class=err id=err></div>
   </div>
-  <footer class=home-foot>
-    <div class=promo-mini>
-      <div class=qr>"""+QR_IMG+"""</div>
-      <div class=txt>关注 <b>量化新手村</b> · 复盘技巧与使用案例</div>
-    </div>
-    <p class=foot-note>CSV / Excel 仅本地解析；截图 OCR 需联网。指标由规则引擎计算，数据不外传。</p>
-  </footer>
+  <div class=promo>
+    <div class=qr>"""+QR_IMG+"""</div>
+    <div class=txt><div class=ttl>关注「量化新手村」公众号</div>
+      <div>获取更多散户量化复盘技巧、TradeCheck 使用案例与策略迭代笔记。</div>
+      <div class=sub>扫码或在微信搜「量化新手村」</div></div>
+  </div>
+  <div class=privacy>🔒 <b>隐私说明</b>：① CSV / Excel 交割单<b>仅在本地解析</b>，不外传；② 图片识别需将截图发送至后端 OCR；③ 诊断数字均由确定性引擎计算，AI 仅作文字润色（如已启用）。</div>
+  <div class=cols>
+    <div class=feat><div class=feat-num>1</div><h4>自动识别风格</h4><p>超短 / 打板接力 / 低吸 / 波段 / 价投，自动判定并采用对应评价标尺。</p></div>
+    <div class=feat><div class=feat-num>2</div><h4>确定性指标</h4><p>FIFO 配对重建每笔交易，胜率、盈亏比、持有周期、成本全部由代码算出。</p></div>
+    <div class=feat><div class=feat-num>3</div><h4>规则 + AI 诊断</h4><p>规则引擎找出核心问题；接入后端时 AI 可润色小结与建议。</p></div>
+  </div>
 </div>
 <div id=report class=wrap style=display:none></div>
 """
