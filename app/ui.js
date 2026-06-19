@@ -17,12 +17,10 @@ async function probeBackend(){
     if(r.ok){BACKEND.tc=true;}}
   catch(e){BACKEND.tc=false;}
   const el=$("#beStatus");if(!el)return;
-  const lines=[];
-  if(BACKEND.ok){lines.push("● 后端已连接"+(BACKEND.mock?"(<b>mock 演示</b>)":(BACKEND.model?"(<b>"+BACKEND.model+"</b>)":""))+(BACKEND_BASE?" @ "+BACKEND_BASE.replace(/^https?:\/\//,""):""));}
-  else{lines.push("○ 未连接 AI 后端 — 仅本地规则诊断"+(BACKEND_BASE?" (配置:"+BACKEND_BASE+")":""));}
-  if(BACKEND.tc){lines.push("● TradeCheck 行情服务可用 — 上传交割单后自动补行情(无需手工提供日线 CSV)");}
-  el.innerHTML=lines.join("<br>");
-  el.className=BACKEND.ok||BACKEND.tc?"be on":"be off";
+  // 只汇报对 TradeCheck 真正有意义的能力:行情自动补、AI 诊断需独立确认
+  // mrdk 主健康接口 200 ≠ AI 诊断可用,故不再把 BACKEND.ok 等同于 AI 可用
+  if(BACKEND.tc){el.innerHTML="● 行情服务就绪 — 上传交割单后自动补日线";el.className="be on";}
+  else{el.innerHTML="○ 离线模式 — 仅本地规则诊断可用";el.className="be off";}
 }
 
 /* 自动从后端拉行情:输入是已 parseDeals 后的交易明细数组,输出 CSV 字符串(供 TC.analyze 第二参) */
