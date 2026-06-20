@@ -1265,11 +1265,11 @@ function renderReport(R){
     <div class=score-txt><h2>整体评价：${m.grade}</h2><p>${R.isSample?"样例账户":""}区间净${m.total_pnl>=0?"盈利":"亏损"} ${yuan2(m.total_pnl)}。下方为按${R.isSample?"该样例":"你的"}交易风格生成的逐项诊断与整改建议,所有数字均由系统对交割单确定性计算得出。</p></div></div>
   <div class=grid>${cards.map(c=>kpiCard(...c)).join("")}</div>
   <h2 class=sec>行为画像</h2>
-  <div class=charts><div class=panel><h4>持有周期分布(笔数)</h4><p class=sub>${Object.entries(m.buckets).map(([k,v])=>k+" "+v+"笔").join(" · ")}</p><div class="chart-box tall"><canvas id=holdChart></canvas></div></div>
+  <div class=charts><div class=panel style="grid-column:1/-1"><h4>累计净盈亏曲线(元) <span style="color:var(--mut);font-size:12px;font-weight:400">· 最大回撤 ${yuan(m.max_drawdown||0)}</span></h4><div class="chart-box tall"><canvas id=equityChart></canvas></div></div></div>
+  <div class=charts style=margin-top:16px><div class=panel><h4>持有周期分布(笔数)</h4><p class=sub>${Object.entries(m.buckets).map(([k,v])=>k+" "+v+"笔").join(" · ")}</p><div class="chart-box tall"><canvas id=holdChart></canvas></div></div>
     <div class=panel><h4>月度净盈亏(元)</h4><div class=chart-box><canvas id=monthChart></canvas></div></div></div>
   <div class=charts style=margin-top:16px><div class=panel><h4>盈利单 vs 亏损单 · 平均持有天数</h4><div class="chart-box sm"><canvas id=deChart></canvas></div></div>
     <div class=panel><h4>盈亏金额结构(元)</h4><div class="chart-box tall"><canvas id=pnlChart></canvas></div></div></div>
-  <div class=charts style=margin-top:16px><div class=panel style="grid-column:1/-1"><h4>累计净盈亏曲线(元) <span style="color:var(--mut);font-size:12px;font-weight:400">· 最大回撤 ${yuan(m.max_drawdown||0)}</span></h4><div class="chart-box tall"><canvas id=equityChart></canvas></div></div></div>
   ${dabpHtml}
   <h2 class=sec>问题诊断与整改建议</h2>${aiHtml}${probHtml}
   <h2 class=sec>整改清单(可逐项打勾)</h2><div class=checklist>${checkHtml}</div>
