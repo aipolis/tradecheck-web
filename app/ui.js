@@ -345,6 +345,7 @@ async function run(){
       mktText=SAMPLE_MKTS[currentSampleId]||null;
     }
     if(!dealText)throw new Error("请上传交割单(CSV 或图片)，或选择样例报告。");
+    window.__lastParsedCsv=dealText;
 
     // 样例报告已内置交割单/行情,不再自动拉行情(避免切换卡住)
     if(!mktText&&BACKEND.tc&&!currentSampleId){
@@ -383,7 +384,24 @@ async function run(){
     renderReport(R);window.scrollTo(0,0);
   }catch(e){
     if(inReport)showReportBusy("");
-    else{const el=$("#err");if(el)el.textContent="⚠ "+e.message;}
+    else{
+      const el=$("#err");
+      if(el){
+        el.innerHTML="";
+        const span=document.createElement("span");span.textContent="⚠ "+e.message;el.appendChild(span);
+        if(window.__lastParsedCsv){
+          const a=document.createElement("a");a.href="#";a.textContent=" 下载已解析 CSV 排查 ↓";
+          a.style.cssText="margin-left:8px;color:#2e75b6;text-decoration:underline;cursor:pointer;font-weight:600";
+          a.onclick=ev=>{ev.preventDefault();
+            const blob=new Blob([window.__lastParsedCsv],{type:"text/csv;charset=utf-8"});
+            const u=URL.createObjectURL(blob);const link=document.createElement("a");
+            link.href=u;link.download="tradecheck_parsed_"+Date.now()+".csv";document.body.appendChild(link);link.click();link.remove();
+            setTimeout(()=>URL.revokeObjectURL(u),1000);
+          };
+          el.appendChild(a);
+        }
+      }
+    }
     console.error("[run]",e);
   }
   finally{setBusy(false);showReportBusy("");}

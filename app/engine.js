@@ -484,8 +484,29 @@ TC.analyze=function(dealText,marketText){
   const mk=TC.parseMarket(marketText||"");
   const trips=TC.fifo(deals);
   if(!trips.length){
-    const nb=deals.filter(d=>d.side==="买入").length,ns=deals.filter(d=>d.side==="卖出").length;
-    throw new Error("未能从交割单配对出完整交易: 已解析 "+deals.length+" 条("+nb+" 买 / "+ns+" 卖)。常见原因: ①导出区间内只有买入(未平仓); ②Excel 证券代码前导零丢失(已尝试修复,请重新上传); ③操作列未被识别。建议导出 CSV 或检查列名含「成交日期、证券代码、操作、价格、数量」。");
+    const buys=deals.filter(d=>d.side==="买入"),sells=deals.filter(d=>d.side==="卖出");
+    const nb=buys.length,ns=sells.length;
+    const buyCodes=new Set(buys.map(d=>d.code)),sellCodes=new Set(sells.map(d=>d.code));
+    const inter=[...buyCodes].filter(c=>sellCodes.has(c));
+    const onlyBuy=[...buyCodes].filter(c=>!sellCodes.has(c));
+    const onlySell=[...sellCodes].filter(c=>!buyCodes.has(c));
+    const sample=arr=>arr.slice(0,5).map(c=>{
+      const d=deals.find(x=>x.code===c);return c+(d&&d.name?"("+d.name+")":"");
+    }).join("、");
+    let diag="";
+    if(ns===0){diag="导出区间内只有买入(未平仓),需要包含已平仓的卖出记录。";}
+    else if(nb===0){diag="未识别到任何买入,可能是『操作』列被识别成了其他名称。";}
+    else if(inter.length===0){diag="买入和卖出的股票代码完全对不上 — 通常是 OCR 把代码识别错了(数字看花)。买入的代码示例:"+sample(onlyBuy)+"; 卖出的代码示例:"+sample(onlySell)+"。建议直接上传券商 CSV/Excel,或重拍清晰一些的截图。";}
+    else if(inter.length<Math.min(buyCodes.size,sellCodes.size)/3){diag="只有少量代码("+inter.length+"/"+Math.min(buyCodes.size,sellCodes.size)+")在买入和卖出里都出现,OCR 可能识别错了部分代码。买入独有:"+sample(onlyBuy)+"; 卖出独有:"+sample(onlySell);}
+    else{
+      // 代码大体对得上,可能是时间顺序问题 — 卖出排在买入之前
+      let outOfOrder=0;const firstBuy={},firstSell={};
+      deals.forEach(d=>{const k=d.code;if(d.side==="买入"&&!(k in firstBuy))firstBuy[k]=d.date;else if(d.side==="卖出"&&!(k in firstSell))firstSell[k]=d.date;});
+      inter.forEach(c=>{if(firstSell[c]&&firstBuy[c]&&firstSell[c]<firstBuy[c])outOfOrder++;});
+      if(outOfOrder>0)diag="有 "+outOfOrder+" 只股票的首次卖出排在买入之前,可能是 OCR 把日期识别错了,或者交易记录里包含『先前持仓』。";
+      else diag="无法定位具体原因,请尝试上传券商 CSV/Excel。";
+    }
+    throw new Error("未能配对出完整交易: 已解析 "+deals.length+" 条("+nb+" 买 / "+ns+" 卖)。"+diag);
   }
   const f=TC.features(trips,deals,mk);
   const style=TC.classify(f);
