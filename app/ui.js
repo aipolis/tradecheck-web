@@ -128,11 +128,19 @@ function excelToCsv(buf){
       const p=n=>String(n).padStart(2,"0");
       return c.getFullYear()+"-"+p(c.getMonth()+1)+"-"+p(c.getDate())+" "+p(c.getHours())+":"+p(c.getMinutes())+":"+p(c.getSeconds());
     }
+    if(h&&/日期|date/i.test(h)&&typeof c==="number"){
+      const n=Math.round(c);
+      if(n>=19000101&&n<=21001231){
+        const s=String(n);
+        return s.slice(0,4)+"-"+s.slice(4,6)+"-"+s.slice(6,8);
+      }
+    }
     if(h&&/代码|code/i.test(h)&&typeof c==="number"&&c>=0&&c<1e7){
       const n=Math.round(c);return String(n).padStart(n<1e6?6:0,"0");
     }
     return String(c);
   };
+  const normHdr=h=>String(h||"").trim().replace(/\|+$/,"");
   const hdrRe=/成交|证券代码|股票代码|买卖|操作|业务名称|交易日期|成交日期|品种代码/;
   let bestRows=null,bestScore=0;
   for(const sn of wb.SheetNames){
@@ -146,7 +154,7 @@ function excelToCsv(buf){
     if(body.length>bestScore){bestScore=body.length;bestRows=body;}
   }
   if(!bestRows||bestRows.length<2)throw new Error("Excel 中未找到交割单表头(需含成交日期、证券代码、买卖操作等列)");
-  const header=(bestRows[0]||[]).map(h=>String(h||"").trim());
+  const header=(bestRows[0]||[]).map(h=>normHdr(h));
   return bestRows.map((r,ri)=>r.map((c,ci)=>esc(fmtCell(c,ri?header[ci]:null))).join(",")).join("\n");
 }
 function dealPreview(text){
