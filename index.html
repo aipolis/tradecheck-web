@@ -977,7 +977,7 @@ function downloadReport(){
 }
 
 let chartResizeHandler=null;
-function isMobileView(){return window.innerWidth<760;}
+function isMobileView(){return window.innerWidth<760||screen.width<760;}
 function scheduleChartResize(){
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     charts.forEach(c=>{try{c.resize();}catch(e){}});
@@ -1002,22 +1002,9 @@ function enterReportView(){
 }
 function unlockReportScroll(){
   const html=document.documentElement,body=document.body,rep=$("#report");
-  html.style.height="auto";
-  html.style.overflowY="auto";
-  body.style.height="auto";
-  body.style.overflowY="auto";
-  body.style.overflowX="hidden";
-  body.style.maxHeight="none";
+  [html,body].forEach(el=>{el.style.cssText="height:auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch"});
   if(rep){
-    rep.style.height="auto";
-    rep.style.maxHeight="none";
-    rep.style.overflow="visible";
-    void rep.offsetHeight;
-    const foot=document.getElementById("reportEnd");
-    const footBottom=foot?foot.getBoundingClientRect().bottom+window.scrollY+80:0;
-    const sh=Math.max(rep.scrollHeight,rep.offsetHeight,footBottom)+120;
-    body.style.minHeight=sh+"px";
-    html.style.minHeight=sh+"px";
+    rep.style.cssText="display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;position:relative";
   }
 }
 
