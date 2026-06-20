@@ -1,10 +1,26 @@
 # -*- coding: utf-8 -*-
-import base64, os
+import base64, json, os
 eng=open("engine.js",encoding="utf-8").read()
 ui=open("ui.js",encoding="utf-8").read()
 def b64(p):return base64.b64encode(open(p,"rb").read()).decode()
 demo_deal=b64("../samples/dabp/打板_交割单.csv")
 demo_mkt=b64("../samples/dabp/打板_日线行情.csv")
+
+scores_dir=os.path.normpath("../samples/scores")
+manifest=json.load(open(os.path.join(scores_dir,"manifest.json"),encoding="utf-8"))
+sample_meta=[]
+sample_deal_js=[]
+sample_mkt_js=[]
+for item in manifest:
+    deal_path=os.path.normpath(os.path.join(scores_dir,item["deal"]))
+    sample_deal_js.append('"'+item["id"]+'":__b64u("'+b64(deal_path)+'")')
+    if item.get("mkt"):
+        mkt_path=os.path.normpath(os.path.join(scores_dir,item["mkt"]))
+        sample_mkt_js.append('"'+item["id"]+'":__b64u("'+b64(mkt_path)+'")')
+    sample_meta.append({k:item[k] for k in ("id","label","note","score","grade","style","trips")})
+sample_meta_js=json.dumps(sample_meta,ensure_ascii=False)
+sample_deals_js="{"+",".join(sample_deal_js)+"}"
+sample_mkts_js="{"+",".join(sample_mkt_js)+"}"
 
 # 量化新手村公众号二维码:把图片放到 app/assets/gzh-qr.{png,jpg,jpeg,webp} 即可自动嵌入
 # 缺失时用 SVG 占位提示替换
@@ -101,8 +117,31 @@ body.report-mode #report{padding-bottom:max(160px,env(safe-area-inset-bottom))}
 .topbar>div:last-child{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .brand{display:flex;align-items:center;gap:9px;color:var(--accent);font-weight:700;font-size:15px}
 .brand .dot{width:10px;height:10px;border-radius:3px;background:var(--accent2)}
-header.hero{background:linear-gradient(135deg,#1f4e79,#2e75b6);color:#fff;border-radius:16px;padding:22px 26px;margin:12px 0 16px}
-header.hero h1{margin:6px 0 4px;font-size:24px}header.hero .meta{opacity:.92;font-size:13px}
+header.hero{background:linear-gradient(135deg,#1f4e79,#2e75b6);color:#fff;border-radius:16px;padding:22px 26px 20px;margin:12px 0 16px;position:relative;padding-right:max(26px,110px)}
+header.hero h1{margin:6px 0 4px;font-size:24px}header.hero .meta{opacity:.92;font-size:13px;padding-right:8px}
+.sample-hero-btn{position:absolute;right:16px;bottom:14px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.42);color:#fff;border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit;transition:background .15s}
+.sample-hero-btn:hover{background:rgba(255,255,255,.28)}
+.sample-tag-br{position:absolute;right:16px;top:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);padding:3px 10px;border-radius:20px;font-size:11px;opacity:.95}
+.sample-overlay{position:fixed;inset:0;background:rgba(15,25,40,.48);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))}
+.sample-overlay[hidden]{display:none!important}
+.sample-panel{background:#fff;border-radius:16px;max-width:440px;width:100%;max-height:min(82vh,640px);overflow:hidden;box-shadow:0 20px 60px rgba(15,25,40,.25);display:flex;flex-direction:column}
+.sample-panel-hd{padding:18px 20px 12px;border-bottom:1px solid var(--line);position:relative}
+.sample-panel-hd h3{margin:0 0 4px;font-size:17px;color:var(--accent)}
+.sample-panel-hd p{margin:0;color:var(--mut);font-size:12.5px;line-height:1.5;padding-right:28px}
+.sample-close{position:absolute;right:14px;top:14px;border:0;background:#f0f4fa;width:28px;height:28px;border-radius:8px;cursor:pointer;color:var(--mut);font-size:14px}
+.sample-list{padding:10px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sample-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+.sample-item:hover,.sample-item:focus{border-color:#b8d4f0;box-shadow:0 6px 18px rgba(46,117,182,.12);outline:none}
+.sample-item.active{border-color:var(--accent2);background:#f8fbff}
+.si-score{flex:0 0 42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;background:linear-gradient(135deg,#1f4e79,#2e75b6)}
+.si-score.lo{background:linear-gradient(135deg,#c45a5a,#d83a3a)}
+.si-score.mid{background:linear-gradient(135deg,#c98a20,#d98a00)}
+.si-body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.si-body b{font-size:14px;color:var(--ink)}
+.si-body small{font-size:11.5px;color:var(--mut);line-height:1.45}
+.sample-note{background:#fff8ef;border:1px solid #f0dfc8;border-radius:12px;padding:12px 16px;margin:-4px 0 14px;font-size:13px;color:#6b4e12;line-height:1.6}
+.upload-sample{margin:0;color:var(--accent2);background:transparent;border:0;border-radius:999px;cursor:pointer;font-size:13px;padding:6px 14px;text-decoration:none;transition:color .15s,background .15s}
+.upload-sample:hover{color:var(--accent);background:rgba(46,117,182,.08)}
 .idtag{display:inline-flex;gap:6px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);padding:4px 12px;border-radius:20px;font-size:12.5px;margin-top:10px}
 .idbox{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent2);border-radius:12px;padding:13px 18px;margin-bottom:16px;font-size:13px}
 .idbox b{color:var(--accent)}
@@ -171,9 +210,11 @@ th{color:var(--mut);font-weight:600;font-size:11.5px}.code{color:var(--mut);font
 .gauge{width:min(200px,100%)}
 .score-txt h2{font-size:17px}
 .score-txt p{font-size:13px}
-header.hero{padding:18px 16px;border-radius:12px;margin:8px 0 14px}
-header.hero h1{font-size:20px;line-height:1.3}
-header.hero .meta{font-size:12px;line-height:1.55}
+header.hero{padding:18px 16px 52px;border-radius:12px;margin:8px 0 14px;padding-right:16px}
+header.hero h1{font-size:20px;line-height:1.3;padding-right:0}
+header.hero .meta{font-size:12px;line-height:1.55;padding-right:0}
+.sample-hero-btn{right:12px;bottom:10px;font-size:11px;padding:5px 11px}
+.sample-tag-br{right:12px;top:10px;font-size:10px;padding:2px 8px}
 .idtag{font-size:11px;line-height:1.45;flex-wrap:wrap;justify-content:center;text-align:center;max-width:100%}
 .idbox{padding:12px 14px;font-size:12.5px;line-height:1.55}
 h2.sec{font-size:16px;margin:20px 0 10px}
@@ -274,7 +315,7 @@ UPLOAD = """
   <!-- 日线行情上传区已删除:行情由后端 /api/tradecheck/build_market_csv 自动补齐,用户无需上传 -->
   <div class=actions>
     <button class=btn id=runBtn disabled>生成诊断报告</button>
-    <button class=demo id=demoBtn>没有文件？用示例账户（打板接力）体验 →</button>
+    <button class=upload-sample id=sampleBtn type=button>查看样例报告（20–90 分）→</button>
   </div>
   <div class=err id=err></div>
   </div>
@@ -307,7 +348,8 @@ html = ("<!DOCTYPE html><html lang=zh-CN><head><meta charset=utf-8>"
 "<script>window.TRADECHECK_BACKEND="+repr(BACKEND_URL)+";</script>"
 "<script>"+eng+"</script>"
 "<script>function __b64u(b){return decodeURIComponent(Array.prototype.map.call(atob(b),c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));}"
-"const DEMO_DEAL=__b64u(\""+demo_deal+"\");const DEMO_MKT=__b64u(\""+demo_mkt+"\");</script>"
+"const DEMO_DEAL=__b64u(\""+demo_deal+"\");const DEMO_MKT=__b64u(\""+demo_mkt+"\");"
+"const SAMPLE_META="+sample_meta_js+";const SAMPLE_DEALS="+sample_deals_js+";const SAMPLE_MKTS="+sample_mkts_js+";</script>"
 "<script>"+ui+"</script></body></html>")
 
 open("../TradeCheck.html","w",encoding="utf-8").write(html)

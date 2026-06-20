@@ -1,6 +1,6 @@
 /* TradeCheck UI:支持 CSV 或多张图片上传、AI诊断(后端)、报告下载。依赖 TC 与 Chart.js */
 const $=s=>document.querySelector(s);
-let fileDeal=null,fileMkt=null,images=[],charts=[],BACKEND={ok:false,tc:false};
+let fileDeal=null,fileMkt=null,images=[],charts=[],BACKEND={ok:false,tc:false},currentSampleId=null;
 const yuan=x=>(x<0?"-￥":"￥")+Math.abs(Math.round(x)).toLocaleString();
 const yuan2=x=>(x<0?"-￥":"￥")+Math.abs(x).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 // 后端地址:Cloudflare Pages 部署时填入微信云托管公网域名;本地开发置空走相对路径
@@ -173,7 +173,7 @@ function isDealTextFile(file){
   return /\.(csv|txt)$/.test(n)||file.type==="text/csv"||file.type==="text/plain";
 }
 function applyDealText(text,name){
-  fileDeal=text;const prev=dealPreview(text);
+  currentSampleId=null;fileDeal=text;const prev=dealPreview(text);
   $("#dealName").textContent="✓ "+name+(prev?" ("+prev+")":"");
   $("#dealZone").classList.add("ok");
   $("#err").textContent="";syncRun();
@@ -252,7 +252,11 @@ async function run(){$("#err").textContent="";
       }
       dealText=j.csv;
     }
-    if(!dealText)throw new Error("请上传交割单(CSV 或图片)。");
+    if(currentSampleId&&typeof SAMPLE_DEALS!=="undefined"&&SAMPLE_DEALS[currentSampleId]){
+      dealText=SAMPLE_DEALS[currentSampleId];
+      if(SAMPLE_MKTS[currentSampleId])mktText=SAMPLE_MKTS[currentSampleId];
+    }
+    if(!dealText)throw new Error("请上传交割单(CSV 或图片)，或选择样例报告。");
 
     // 若用户没手工提供行情 CSV 且 TradeCheck 行情服务可用,自动从后端拉
     let mktText=fileMkt,mktNote=null;
@@ -270,6 +274,9 @@ async function run(){$("#err").textContent="";
 
     setBusy(true,"正在计算指标…");
     const R=TC.analyze(dealText,mktText);
+    if(currentSampleId&&typeof SAMPLE_META!=="undefined")
+      R.sampleMeta=SAMPLE_META.find(s=>s.id===currentSampleId)||null;
+    R.isSample=!!R.sampleMeta;
     if(mktNote)R.marketFetch=mktNote;
 
     if(BACKEND.diagnose){
@@ -289,7 +296,33 @@ async function run(){$("#err").textContent="";
   }catch(e){$("#err").textContent="⚠ "+e.message;}
   finally{setBusy(false);}
 }
-function loadDemo(){fileDeal=DEMO_DEAL;fileMkt=DEMO_MKT;run();}
+function scoreClass(sc){return sc>=65?"":sc>=50?" mid":" lo";}
+function showSamplePicker(){
+  let ov=$("#sampleOverlay");
+  if(!ov){
+    ov=document.createElement("div");ov.id="sampleOverlay";ov.className="sample-overlay";ov.hidden=true;
+    ov.innerHTML=`<div class=sample-panel role=dialog aria-label=样例报告>
+      <div class=sample-panel-hd><h3>样例报告</h3><p>覆盖 20–90 分不同表现：含模拟账户、真实脱敏交割单与公开打板样例。指标均由引擎真实计算。</p>
+      <button type=button class=sample-close aria-label=关闭 onclick=closeSamplePicker()>✕</button></div>
+      <div class=sample-list>${(SAMPLE_META||[]).map(s=>`<button type=button class="sample-item${s.id===currentSampleId?" active":""}" data-id="${s.id}">
+        <span class="si-score${scoreClass(s.score)}">${s.score}</span>
+        <span class=si-body><b>${s.label}</b><small>${s.note} · ${s.style} · ${s.trips} 笔</small></span></button>`).join("")}</div></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener("click",e=>{if(e.target===ov)closeSamplePicker();});
+    ov.querySelectorAll(".sample-item").forEach(b=>b.onclick=()=>{loadSampleReport(b.dataset.id);});
+  }else{
+    ov.querySelectorAll(".sample-item").forEach(b=>b.classList.toggle("active",b.dataset.id===currentSampleId));
+  }
+  ov.hidden=false;
+}
+function closeSamplePicker(){const ov=$("#sampleOverlay");if(ov)ov.hidden=true;}
+async function loadSampleReport(id){
+  if(typeof SAMPLE_DEALS==="undefined"||!SAMPLE_DEALS[id])return;
+  closeSamplePicker();
+  currentSampleId=id;fileDeal=SAMPLE_DEALS[id];fileMkt=SAMPLE_MKTS[id]||null;images=[];
+  renderThumbs();syncRun();await run();
+}
+function loadDemo(){showSamplePicker();}
 function reset(){location.reload();}
 
 function downloadReport(){
@@ -378,20 +411,25 @@ function renderReport(R){
       <div class=panel><h4 class=pos>盈利最好的接力</h4>${mob?br:`<div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${br}</table></div>`}</div></div>`;}
 
   const nDiag=R.diagnoses.length,nChart=4+(d?2:0);
+  const sm=R.sampleMeta;
+  const sampleBadge=sm?`<span class=sample-tag-br>样例 · ${sm.score}分</span>`:"";
+  const sampleNote=sm?`<p class=sample-note>本页为<b>${sm.label}</b>（${sm.note}），仅供了解不同分数段报告形态，非你的真实账户。</p>`:"";
   $("#report").innerHTML=`
   <div class=topbar><div class=brand><span class=dot></span>TradeCheck · 交易诊断助手</div>
     <div><button class=btn-ghost onclick=downloadReport()>⬇ 下载报告</button>
     <button class=btn-ghost onclick=window.print()>打印 / 导出PDF</button>
     <button class=btn-ghost onclick=reset()>重新上传</button></div></div>
   <div class=report-summary>本报告含 ${cards.length} 项核心指标 · ${nChart} 张图表${d?" · 打板专属分析":""} · ${nDiag} 条诊断，内容与电脑端一致，请向下滑动查看全部</div>
-  <header class=hero><div class=meta>复盘区间 ${m.period_start} 至 ${m.period_end} · ${m.n_trades} 笔完整交易 / ${m.n_orders} 次成交 · 本地解析</div>
-    <h1>交易行为诊断报告</h1><span class=idtag>● 已识别交易风格：<b>${st.label}</b> &nbsp;置信度 ${st.confidence}%</span></header>
+  <header class=hero><div class=meta>复盘区间 ${m.period_start} 至 ${m.period_end} · ${m.n_trades} 笔完整交易 / ${m.n_orders} 次成交 · ${R.isSample?"样例数据":"本地解析"}</div>
+    <h1>交易行为诊断报告</h1><span class=idtag>● 已识别交易风格：<b>${st.label}</b> &nbsp;置信度 ${st.confidence}%</span>
+    ${sampleBadge}<button type=button class=sample-hero-btn onclick=showSamplePicker()>样例报告 ▾</button></header>
+  ${sampleNote}
   <div class=idbox>📌 <b>风格识别判据</b>:${st.reasons.join(";")}。系统据此采用${d?"<b>打板接力专属标尺</b>":"对应评价标尺"}进行诊断。</div>
   <div class=scorewrap><div class=gauge><svg viewBox="0 0 200 110" width=200 height=110>
       <path d="M15 100 A85 85 0 0 1 185 100" fill=none stroke=#e9eef5 stroke-width=16 stroke-linecap=round/>
       <path d="M15 100 A85 85 0 0 1 185 100" fill=none stroke=${m.score>=65?"#178a5a":m.score>=50?"#d98a00":"#d83a3a"} stroke-width=16 stroke-linecap=round stroke-dasharray="${267*m.score/100} 400"/>
       </svg><div class=val><div class=num style=color:${m.score>=65?"#178a5a":m.score>=50?"#d98a00":"#d83a3a"}>${m.score}</div><div class=grade>健康分/100 · 等级：${m.grade}</div></div></div>
-    <div class=score-txt><h2>整体评价：${m.grade}</h2><p>区间净${m.total_pnl>=0?"盈利":"亏损"} ${yuan2(m.total_pnl)}。下方为按你的交易风格生成的逐项诊断与整改建议,所有数字均由系统对交割单确定性计算得出。</p></div></div>
+    <div class=score-txt><h2>整体评价：${m.grade}</h2><p>${R.isSample?"样例账户":""}区间净${m.total_pnl>=0?"盈利":"亏损"} ${yuan2(m.total_pnl)}。下方为按${R.isSample?"该样例":"你的"}交易风格生成的逐项诊断与整改建议,所有数字均由系统对交割单确定性计算得出。</p></div></div>
   <div class=grid>${cards.map(c=>kpiCard(...c)).join("")}</div>
   <h2 class=sec>行为画像</h2>
   <div class=charts><div class=panel><h4>持有周期分布(笔数)</h4><p class=sub>${Object.entries(m.buckets).map(([k,v])=>k+" "+v+"笔").join(" · ")}</p><div class="chart-box tall"><canvas id=holdChart></canvas></div></div>
@@ -495,6 +533,7 @@ function initCharts(m,d){
 }
 document.addEventListener("DOMContentLoaded",()=>{
   bindCSV("dealZone","dealInput","deal");bindImg();
-  $("#runBtn").addEventListener("click",run);$("#demoBtn").addEventListener("click",loadDemo);
+  $("#runBtn").addEventListener("click",run);
+  const sb=$("#sampleBtn");if(sb)sb.addEventListener("click",showSamplePicker);
   probeBackend();
 });
