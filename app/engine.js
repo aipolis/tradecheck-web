@@ -22,6 +22,7 @@ function parseCSV(text){
 }
 function pick(o,names){for(const n of names)if(o[n]!=null&&o[n]!=="")return o[n];return null;}
 function pdate(s){s=String(s).split(" ")[0].replace(/\//g,"-");const[a,b,c]=s.split("-");return new Date(+a,+b-1,+c);}
+function ldate(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function daysBetween(a,b){return Math.round((b-a)/86400000);}
 function median(xs){if(!xs.length)return 0;const s=[...xs].sort((a,b)=>a-b);const n=s.length;return n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2;}
 function pctOf(xs,f){return xs.length?r2(xs.filter(f).length/xs.length*100):0;}
@@ -89,7 +90,7 @@ TC.features=function(trips,deals,mk){
     trades_per_month:r2(n/months),distinct_codes:new Set(trips.map(t=>t.code)).size,
     avg_position:n?r0(trips.reduce((a,t)=>a+t.buy_amt,0)/n):0,has_market:Object.keys(mk).length>0};
   if(f.has_market){let db=0,lo=0,tot=0;
-    for(const t of trips){const m=mk[t.code+"|"+t.buy_date.toISOString().slice(0,10)];if(!m)continue;tot++;
+    for(const t of trips){const m=mk[t.code+"|"+ldate(t.buy_date)];if(!m)continue;tot++;
       if(m.limit&&t.buy_price>=m.limit*0.997)db++;else if(t.buy_price<=m.open*1.001)lo++;}
     f.db_ratio=tot?r2(db/tot*100):null;f.lo_ratio=tot?r2(lo/tot*100):null;}
   return f;
@@ -131,7 +132,7 @@ TC.metrics=function(trips,deals){
   const total_comm=r2(sum(deals.map(d=>d.fee)));
   const turnover=r2(sum(deals.map(d=>d.price*d.qty)));
   const cvt=turnover?r2(total_comm/turnover*100):0,cvg=gross_profit?r2(total_comm/gross_profit*100):0;
-  const monthly={};trips.forEach(t=>{const k=t.sell_date.toISOString().slice(0,7);monthly[k]=(monthly[k]||0)+t.pnl;});
+  const monthly={};trips.forEach(t=>{const k=ldate(t.sell_date).slice(0,7);monthly[k]=(monthly[k]||0)+t.pnl;});
   Object.keys(monthly).forEach(k=>monthly[k]=r2(monthly[k]));
   const buckets={"1天":0,"2-3天":0,"4-7天":0,"8-14天":0,"15天+":0};
   trips.forEach(t=>{const h=t.hold;buckets[h<=1?"1天":h<=3?"2-3天":h<=7?"4-7天":h<=14?"8-14天":"15天+"]++;});
@@ -139,8 +140,8 @@ TC.metrics=function(trips,deals){
   score-=Math.min(cvg*0.25,15);score+=total_pnl>0?8:-8;score=Math.max(5,Math.min(95,r0(score)));
   const grade=score>=80?"优秀":score>=65?"良好":score>=50?"及格":score>=35?"偏弱":"差";
   const ds=trips.map(t=>t.sell_date.getTime());
-  return{period_start:new Date(Math.min(...trips.map(t=>t.buy_date))).toISOString().slice(0,10),
-    period_end:new Date(Math.max(...ds)).toISOString().slice(0,10),
+  return{period_start:ldate(new Date(Math.min(...trips.map(t=>t.buy_date)))),
+    period_end:ldate(new Date(Math.max(...ds))),
     n_trades:n,n_orders:deals.length,n_wins:wins.length,n_losses:losses.length,win_rate,total_pnl,
     gross_profit,gross_loss,avg_win,avg_loss,profit_loss_ratio:plr,profit_factor:pf,
     max_loss:r2(Math.min(...trips.map(t=>t.pnl))),max_win:r2(Math.max(...trips.map(t=>t.pnl))),
@@ -154,8 +155,8 @@ function bgroup(b){return b===1?"首板":b===2?"二板":b===3?"三板":b>=4?"四
 TC.dabp=function(trips,mk){
   function addTD(d,k){let c=new Date(d);let n=k;while(n>0){c.setDate(c.getDate()+1);if(c.getDay()!==0&&c.getDay()!==6)n--;}return c;}
   const sum=a=>a.reduce((x,y)=>x+y,0);const enr=[];
-  for(const t of trips){const bm=mk[t.code+"|"+t.buy_date.toISOString().slice(0,10)];if(!bm)continue;
-    const nd=addTD(t.buy_date,1);const ndm=mk[t.code+"|"+nd.toISOString().slice(0,10)];
+  for(const t of trips){const bm=mk[t.code+"|"+ldate(t.buy_date)];if(!bm)continue;
+    const nd=addTD(t.buy_date,1);const ndm=mk[t.code+"|"+ldate(nd)];
     const board=bm.board||0;const buyClose=bm.close||t.buy_price;
     const entry=t.buy_price>=(bm.limit||1e9)*0.997?"打板":t.buy_price>bm.open?"半路":"低吸";
     const premium=ndm?r2((ndm.open/buyClose-1)*100):0;const ndOpen=ndm?ndm.open:buyClose;
@@ -192,7 +193,7 @@ TC.dipbuy=function(trips,mk){
   const sum=a=>a.reduce((x,y)=>x+y,0);
   const enr=[];
   for(const t of trips){
-    const bm=mk[t.code+"|"+t.buy_date.toISOString().slice(0,10)];if(!bm||!bm.open)continue;
+    const bm=mk[t.code+"|"+ldate(t.buy_date)];if(!bm||!bm.open)continue;
     if(t.buy_price>bm.open*1.002)continue; // 低吸:买入价贴近或低于开盘
     const nearLow=bm.low&&t.buy_price<=bm.low*1.03;
     enr.push({...t,nearLow,ret:t.ret||(t.pnl/t.buy_amt*100)});
