@@ -26,21 +26,43 @@ function ldate(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"
 function daysBetween(a,b){return Math.round((b-a)/86400000);}
 function median(xs){if(!xs.length)return 0;const s=[...xs].sort((a,b)=>a-b);const n=s.length;return n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2;}
 function pctOf(xs,f){return xs.length?r2(xs.filter(f).length/xs.length*100):0;}
+function normCode(raw){
+  if(raw==null||raw==="")return "";
+  let c=String(raw).trim().toUpperCase();
+  if(/^\d+\.0+$/.test(c))c=c.replace(/\.0+$/,"");
+  if(/^\d+$/.test(c))return c.length<=6?c.padStart(6,"0"):c;
+  return c;
+}
+function normSide(raw){
+  if(raw==null||raw==="")return null;
+  const s=String(raw).trim();
+  if(/^(1|B|BUY)$/i.test(s))return "买入";
+  if(/^(2|S|-1|SELL)$/i.test(s))return "卖出";
+  if(/银证|转账|分红|派息|转托管|申购|赎回|配号|质押|解冻|利息|扣税|信息费|汇总|小计|合计/.test(s))return null;
+  const hasBuy=/买/.test(s),hasSell=/卖/.test(s);
+  if(hasBuy&&!hasSell)return "买入";
+  if(hasSell&&!hasBuy)return "卖出";
+  return null;
+}
 
 // ---------- 解析 ----------
 TC.parseDeals=function(text){
   const rows=parseCSV(text);const deals=[];
   for(const r of rows){
-    const dt=pick(r,["成交时间","成交日期","日期","时间"]);
-    const side=pick(r,["操作","买卖","方向","业务名称"]);
-    const code=pick(r,["证券代码","代码","股票代码"]);
-    const price=pick(r,["成交价格","价格","成交均价","成交价"]);
-    const qty=pick(r,["成交数量","数量","成交股数","成交量"]);
-    if(!dt||!side||!code||price==null||qty==null)continue;
-    const name=pick(r,["证券名称","名称","股票名称"])||code;
-    const fee=["佣金","印花税","过户费","手续费","规费"].reduce((s,k)=>s+(parseFloat(r[k])||0),0);
-    deals.push({date:pdate(dt),code:String(code),name,side:String(side).includes("买")?"买入":"卖出",
-      price:parseFloat(price),qty:Math.round(parseFloat(qty)),fee});
+    const dt=pick(r,["成交时间","成交日期","交易时间","交易日期","日期","时间","发生日期"]);
+    let side=pick(r,["操作","买卖","方向","业务名称","委托方向","交易类型","买卖方向"]);
+    const code=pick(r,["证券代码","代码","股票代码","品种代码"]);
+    const price=pick(r,["成交价格","价格","成交均价","成交价","均价"]);
+    const qty=pick(r,["成交数量","数量","成交股数","成交量","发生数量"]);
+    side=normSide(side);
+    const nc=normCode(code);
+    if(!dt||!side||!nc||price==null||qty==null)continue;
+    const pq=Math.round(Math.abs(parseFloat(qty)));
+    const pp=parseFloat(price);
+    if(!pq||!pp||isNaN(pp))continue;
+    const name=pick(r,["证券名称","名称","股票名称","品种名称"])||nc;
+    const fee=["佣金","印花税","过户费","手续费","规费","其他费"].reduce((s,k)=>s+(parseFloat(r[k])||0),0);
+    deals.push({date:pdate(dt),code:nc,name,side,price:pp,qty:pq,fee});
   }
   deals.sort((a,b)=>a.date-b.date||((a.side!=="买入")-(b.side!=="买入")));
   return deals;
@@ -411,7 +433,10 @@ TC.analyze=function(dealText,marketText){
   if(deals.length<2)throw new Error("交割单解析为空或过少,请检查文件格式。需要包含:成交日期/时间、证券代码、操作(买入/卖出)、成交价格、成交数量。");
   const mk=TC.parseMarket(marketText||"");
   const trips=TC.fifo(deals);
-  if(!trips.length)throw new Error("未能从交割单配对出完整交易(可能只有买入没有卖出)。");
+  if(!trips.length){
+    const nb=deals.filter(d=>d.side==="买入").length,ns=deals.filter(d=>d.side==="卖出").length;
+    throw new Error("未能从交割单配对出完整交易: 已解析 "+deals.length+" 条("+nb+" 买 / "+ns+" 卖)。常见原因: ①导出区间内只有买入(未平仓); ②Excel 证券代码前导零丢失(已尝试修复,请重新上传); ③操作列未被识别。建议导出 CSV 或检查列名含「成交日期、证券代码、操作、价格、数量」。");
+  }
   const f=TC.features(trips,deals,mk);
   const style=TC.classify(f);
   const m=TC.metrics(trips,deals);

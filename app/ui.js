@@ -121,25 +121,40 @@ async function autoFetchMarket(deals){
 function excelToCsv(buf){
   if(typeof XLSX==="undefined")throw new Error("Excel 解析组件未加载,请刷新页面重试");
   const wb=XLSX.read(buf,{type:"array",cellDates:true});
-  const sheet=wb.Sheets[wb.SheetNames[0]];
-  if(!sheet)throw new Error("Excel 文件中没有工作表");
-  const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:"",raw:false,dateNF:"yyyy-mm-dd hh:mm:ss"});
-  let start=0;
-  for(let i=0;i<Math.min(rows.length,25);i++){
-    const line=(rows[i]||[]).join("|");
-    if(/成交|证券代码|买卖|操作|业务名称/.test(line)){start=i;break;}
-  }
   const esc=c=>{const s=c==null?"":String(c);return /[\",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
-  const fmt=c=>{
+  const fmtCell=(c,h)=>{
     if(c==null||c==="")return "";
     if(c instanceof Date){
       const p=n=>String(n).padStart(2,"0");
       return c.getFullYear()+"-"+p(c.getMonth()+1)+"-"+p(c.getDate())+" "+p(c.getHours())+":"+p(c.getMinutes())+":"+p(c.getSeconds());
     }
+    if(h&&/代码|code/i.test(h)&&typeof c==="number"&&c>=0&&c<1e7){
+      const n=Math.round(c);return String(n).padStart(n<1e6?6:0,"0");
+    }
     return String(c);
   };
-  return rows.slice(start).filter(r=>r&&r.some(c=>c!=null&&String(c).trim()!==""))
-    .map(r=>r.map(c=>esc(fmt(c))).join(",")).join("\n");
+  const hdrRe=/成交|证券代码|股票代码|买卖|操作|业务名称|交易日期|成交日期|品种代码/;
+  let bestRows=null,bestScore=0;
+  for(const sn of wb.SheetNames){
+    const sheet=wb.Sheets[sn]; if(!sheet)continue;
+    const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:"",raw:false,dateNF:"yyyy-mm-dd hh:mm:ss"});
+    let start=0;
+    for(let i=0;i<Math.min(rows.length,35);i++){
+      if(hdrRe.test((rows[i]||[]).join("|"))){start=i;break;}
+    }
+    const body=rows.slice(start).filter(r=>r&&r.some(c=>c!=null&&String(c).trim()!==""));
+    if(body.length>bestScore){bestScore=body.length;bestRows=body;}
+  }
+  if(!bestRows||bestRows.length<2)throw new Error("Excel 中未找到交割单表头(需含成交日期、证券代码、买卖操作等列)");
+  const header=(bestRows[0]||[]).map(h=>String(h||"").trim());
+  return bestRows.map((r,ri)=>r.map((c,ci)=>esc(fmtCell(c,ri?header[ci]:null))).join(",")).join("\n");
+}
+function dealPreview(text){
+  try{
+    const deals=TC.parseDeals(text);
+    const nb=deals.filter(d=>d.side==="买入").length,ns=deals.filter(d=>d.side==="卖出").length;
+    return deals.length?`${deals.length}条 · ${nb}买/${ns}卖`:"";
+  }catch(e){return "";}
 }
 function isExcelFile(file){
   const n=(file.name||"").toLowerCase();
@@ -150,7 +165,9 @@ function isDealTextFile(file){
   return /\.(csv|txt)$/.test(n)||file.type==="text/csv"||file.type==="text/plain";
 }
 function applyDealText(text,name){
-  fileDeal=text;$("#dealName").textContent="✓ "+name;$("#dealZone").classList.add("ok");
+  fileDeal=text;const prev=dealPreview(text);
+  $("#dealName").textContent="✓ "+name+(prev?" ("+prev+")":"");
+  $("#dealZone").classList.add("ok");
   $("#err").textContent="";syncRun();
 }
 function loadDealFile(which,file){
