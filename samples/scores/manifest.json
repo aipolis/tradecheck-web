@@ -5,11 +5,11 @@
     "mkt": "",
     "label": "90分 · 稳健波段",
     "note": "模拟 · 高胜率稳健波段",
-    "score": 90,
+    "score": 85,
     "grade": "优秀",
     "style": "通用/混合(持有周期两极分化)",
-    "trips": 200,
-    "orders": 400
+    "trips": 225,
+    "orders": 418
   },
   {
     "id": "score_80_短线纪律",
@@ -17,11 +17,11 @@
     "mkt": "",
     "label": "80分 · 短线纪律",
     "note": "模拟 · 超短T+1~3日",
-    "score": 80,
-    "grade": "优秀",
-    "style": "超短",
-    "trips": 200,
-    "orders": 400
+    "score": 78,
+    "grade": "良好",
+    "style": "短线",
+    "trips": 219,
+    "orders": 420
   },
   {
     "id": "erchi_二池",
@@ -39,25 +39,13 @@
     "id": "score_60_微利震荡",
     "deal": "score_60_微利震荡.csv",
     "mkt": "",
-    "label": "59分 · 微利震荡",
+    "label": "60分 · 微利震荡",
     "note": "模拟 · 胜率略高期望一般",
-    "score": 59,
+    "score": 60,
     "grade": "及格",
     "style": "通用/混合(持有周期两极分化)",
-    "trips": 200,
-    "orders": 400
-  },
-  {
-    "id": "score_50_盈亏平衡",
-    "deal": "score_50_盈亏平衡.csv",
-    "mkt": "",
-    "label": "41分 · 盈亏平衡",
-    "note": "模拟 · 盈亏期望接近临界",
-    "score": 41,
-    "grade": "偏弱",
-    "style": "通用/混合(持有周期两极分化)",
-    "trips": 200,
-    "orders": 400
+    "trips": 217,
+    "orders": 417
   },
   {
     "id": "score_40_处置效应",
@@ -65,11 +53,11 @@
     "mkt": "",
     "label": "40分 · 处置效应",
     "note": "模拟 · 亏损死扛盈利早卖",
-    "score": 40,
+    "score": 41,
     "grade": "偏弱",
     "style": "通用/混合(持有周期两极分化)",
-    "trips": 200,
-    "orders": 400
+    "trips": 222,
+    "orders": 418
   },
   {
     "id": "dabp_打板",
@@ -87,12 +75,12 @@
     "id": "score_20_频繁割肉",
     "deal": "score_20_频繁割肉.csv",
     "mkt": "",
-    "label": "17分 · 频繁割肉",
+    "label": "20分 · 频繁割肉",
     "note": "模拟 · 低胜率大亏",
-    "score": 17,
+    "score": 22,
     "grade": "差",
-    "style": "波段",
-    "trips": 201,
-    "orders": 400
+    "style": "通用/混合(持有周期两极分化)",
+    "trips": 221,
+    "orders": 418
   }
 ]
