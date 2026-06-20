@@ -214,9 +214,9 @@ th{color:var(--mut);font-weight:600;font-size:11.5px}.code{color:var(--mut);font
 .score-txt p{font-size:13px}
 header.hero{padding:18px 16px 52px;border-radius:12px;margin:8px 0 14px;padding-right:16px}
 header.hero h1{font-size:20px;line-height:1.3;padding-right:0}
-header.hero .meta{font-size:12px;line-height:1.55;padding-right:0}
+header.hero .meta{font-size:12px;line-height:1.55;padding-right:78px}
 .sample-hero-btn{right:12px;bottom:10px;font-size:11px;padding:5px 11px}
-.sample-tag-br{right:12px;top:10px;font-size:10px;padding:2px 8px}
+.sample-tag-br{right:12px;top:12px;font-size:10px;padding:3px 9px;white-space:nowrap}
 .idtag{font-size:11px;line-height:1.45;flex-wrap:wrap;justify-content:center;text-align:center;max-width:100%}
 .idbox{padding:12px 14px;font-size:12.5px;line-height:1.55}
 h2.sec{font-size:16px;margin:20px 0 10px}
@@ -275,6 +275,21 @@ th,td{padding:6px 8px}
 .rc-pnl{font-weight:700;font-size:15px}
 .rc-row{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--mut)}
 .disc{margin-top:14px;color:var(--mut);font-size:12px;text-align:center;font-style:italic}
+.optin{margin-top:18px;padding:12px 14px;background:#f6f9fc;border:1px solid var(--line);border-radius:8px;font-size:12.5px;line-height:1.75;color:#445}
+.optin label{display:block;cursor:pointer}
+.optin input[type=checkbox]{margin-right:6px;vertical-align:middle;transform:translateY(-1px)}
+.optin b{color:#1f3a52}
+.fbcard{margin-top:20px;padding:16px 18px;background:#fff;border:1px solid var(--line);border-left:4px solid #2e75b6;border-radius:8px;box-shadow:0 2px 12px rgba(20,40,80,.05)}
+.fb-head{font-weight:700;font-size:14px;margin-bottom:10px}
+.fb-stars{font-size:28px;letter-spacing:6px;color:#d98a00;cursor:pointer;user-select:none;margin-bottom:10px}
+.fb-stars span{transition:transform .15s}
+.fb-stars span:hover{transform:scale(1.15)}
+.fbcard textarea{width:100%;min-height:60px;padding:8px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical;box-sizing:border-box}
+.fb-actions{margin-top:10px;display:flex;gap:8px}
+.fb-actions button{padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid var(--line)}
+.fb-actions .primary{background:#2e75b6;color:#fff;border-color:#2e75b6}
+.fb-actions .ghost{background:#fff;color:#666}
+.fb-thanks{margin-top:8px;color:#178a5a;font-size:13px}
 .btn-busy{opacity:.8}
 """
 

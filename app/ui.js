@@ -7,6 +7,77 @@ const yuan2=x=>(x<0?"-￥":"￥")+Math.abs(x).toLocaleString(undefined,{minimumF
 const BACKEND_BASE=(window.TRADECHECK_BACKEND||"").replace(/\/$/,"");
 const apiURL=p=>BACKEND_BASE?BACKEND_BASE+p:p;
 
+function getUUID(){
+  let u=null;try{u=localStorage.getItem("tc_uid");}catch(e){}
+  if(u&&u.length>=8)return u;
+  // RFC4122 v4-ish, 不依赖 crypto.randomUUID 兼容老 Safari
+  u="tc-"+(Date.now().toString(36))+"-"+Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,10);
+  try{localStorage.setItem("tc_uid",u);}catch(e){}
+  return u;
+}
+function uaHash(){
+  const s=(navigator.userAgent||"")+"|"+(navigator.language||"")+"|"+(screen.width||0)+"x"+(screen.height||0);
+  let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}
+  return ("h"+(h>>>0).toString(36)).slice(0,16);
+}
+function postMetricsIfAllowed(R,m){
+  if(!BACKEND.tc)return;
+  if(R.isSample)return; // 样例数据不上报
+  const chk=document.getElementById("optinChk");
+  if(!chk||!chk.checked)return;
+  const payload={
+    user_uuid:getUUID(),
+    score:m.score,grade:m.grade,style:R.style?R.style.label:"",
+    n_trades:m.n_trades,n_orders:m.n_orders,
+    win_rate:m.win_rate,profit_loss_ratio:m.profit_loss_ratio,profit_factor:m.profit_factor,
+    avg_hold_win:m.avg_hold_win,avg_hold_loss:m.avg_hold_loss,de_ratio:m.de_ratio,
+    total_return_pct:m.total_return_pct,max_drawdown_pct:m.max_drawdown_pct,
+    total_pnl:m.total_pnl,
+    period_start:m.period_start,period_end:m.period_end,
+    has_market:!!(R.metrics&&R.metrics.has_market)||(Object.keys(R.mk||{}).length>0),
+    has_dabp:!!R.dabp,
+    upload_source:R.source||"csv",ua_hash:uaHash(),
+  };
+  fetch(apiURL("/api/tradecheck/log_metrics"),{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify(payload),keepalive:true
+  }).catch(e=>console.warn("[log_metrics]",e));
+}
+function scheduleFeedbackCard(R,m){
+  if(R.isSample)return;
+  // 30 秒后浮现反馈卡(如果已提交/已关闭则跳过)
+  let submitted=false;try{submitted=localStorage.getItem("tc_fb_submitted")==="1";}catch(e){}
+  if(submitted)return;
+  setTimeout(()=>{
+    const card=document.getElementById("fbCard");if(!card)return;
+    card.style.display="block";card.style.opacity="0";
+    requestAnimationFrame(()=>{card.style.transition="opacity .4s";card.style.opacity="1";});
+    let rating=0;
+    const stars=[...document.querySelectorAll("#fbStars span")];
+    stars.forEach(s=>{
+      s.onclick=()=>{rating=+s.dataset.r;stars.forEach((x,i)=>x.textContent=i<rating?"★":"☆");};
+    });
+    document.getElementById("fbDismiss").onclick=()=>{card.style.display="none";};
+    document.getElementById("fbSubmit").onclick=()=>{
+      if(!rating){alert("请先点一下星星 1-5");return;}
+      const payload={
+        user_uuid:getUUID(),rating,
+        comment:(document.getElementById("fbComment").value||"").slice(0,500),
+        report_score:m.score,report_style:R.style?R.style.label:"",ua_hash:uaHash(),
+      };
+      if(BACKEND.tc){
+        fetch(apiURL("/api/tradecheck/feedback"),{
+          method:"POST",headers:{"content-type":"application/json"},
+          body:JSON.stringify(payload),keepalive:true
+        }).catch(e=>console.warn("[feedback]",e));
+      }
+      try{localStorage.setItem("tc_fb_submitted","1");}catch(e){}
+      document.getElementById("fbThanks").style.display="block";
+      ["fbStars","fbComment","fbSubmit","fbDismiss"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
+    };
+  },30000);
+}
+
 function fetchTimeout(url,ms){
   ms=ms||4000;
   if(typeof AbortSignal!=="undefined"&&AbortSignal.timeout)
@@ -493,7 +564,17 @@ function renderReport(R){
   <h2 class=sec>问题诊断与整改建议</h2>${aiHtml}${probHtml}
   <h2 class=sec>整改清单(可逐项打勾)</h2><div class=checklist>${checkHtml}</div>
   ${R.ai&&R.ai.disclaimer?`<div class=disc>${R.ai.disclaimer}</div>`:""}
-  <div class=foot id=reportEnd>本报告由 TradeCheck 在本地生成,交割单数据未上传第三方;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>`;
+  <div class=optin id=optinBox>
+    <label><input type=checkbox id=optinChk checked> 允许 TradeCheck 匿名收集本次报告的<b>聚合指标</b>(评分/胜率/持有天数/万元盈亏分桶等),用于优化工具与群像分析。<b>原始交割单永远不会上传</b>;股票代码、交易日期、精确金额一律不收集。可随时取消勾选。</label>
+  </div>
+  <div class=foot id=reportEnd>本报告由 TradeCheck 在本地生成,<b>原始交割单数据不上传第三方</b>;AI 诊断仅对已算好的指标做自然语言解读,数字由确定性引擎计算。<br>本工具仅提供交易行为复盘与教育性分析,不构成投资建议,不预测涨跌、不推荐个股。</div>
+  <div class=fbcard id=fbCard style="display:none">
+    <div class=fb-head>👋 觉得这份报告诊断准吗?</div>
+    <div class=fb-stars id=fbStars>${[1,2,3,4,5].map(i=>`<span data-r="${i}">☆</span>`).join("")}</div>
+    <textarea id=fbComment placeholder="(可选)哪里准/不准,想看什么,都可以告诉我" maxlength=500></textarea>
+    <div class=fb-actions><button id=fbSubmit class=primary>提交反馈</button><button id=fbDismiss class=ghost>暂不</button></div>
+    <div class=fb-thanks id=fbThanks style="display:none">已收到,谢谢 🙏</div>
+  </div>`;
   initCharts(m,d);
   scheduleChartResize();
   bindChartResize();
@@ -503,6 +584,8 @@ function renderReport(R){
   setTimeout(()=>{scheduleChartResize();unlockReportScroll();},400);
   setTimeout(unlockReportScroll,1200);
   setTimeout(unlockReportScroll,3000);
+  postMetricsIfAllowed(R,m);
+  scheduleFeedbackCard(R,m);
 }
 function initCharts(m,d){
   const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"};
