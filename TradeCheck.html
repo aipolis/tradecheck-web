@@ -6,12 +6,13 @@ html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;height:auto;overflow-y
 body{margin:0;background:linear-gradient(165deg,#e8eef6 0%,var(--bg) 45%,#f5f7fb 100%);background-attachment:scroll;color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 #report{display:none;overflow:visible;height:auto;min-height:0;position:relative}
 body.report-mode{overflow-x:hidden!important;overflow-y:auto!important;height:auto!important;min-height:0!important;max-height:none!important;-webkit-overflow-scrolling:touch}
-body.report-mode #report{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;padding-bottom:max(96px,env(safe-area-inset-bottom))}
+body.report-mode #report{display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;padding-bottom:max(140px,env(safe-area-inset-bottom))}
 body.report-mode #report .foot{margin-bottom:32px;padding-bottom:16px}
 body.report-mode #report .checklist{margin-bottom:8px}
 @media(max-width:760px){
-body.report-mode #report{padding-bottom:max(120px,env(safe-area-inset-bottom))}
+body.report-mode #report{padding-bottom:max(160px,env(safe-area-inset-bottom))}
 #report .panel,#report .problem,#report .checklist,#report .scorewrap,#report .idbox{overflow:visible}
+#report .checklist{grid-template-columns:1fr;gap:8px}
 }
 .wrap{max-width:980px;margin:0 auto;padding:26px 20px 60px;width:100%;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-bottom:max(60px,env(safe-area-inset-bottom))}
 /* 上传页 */
@@ -200,6 +201,11 @@ th,td{padding:6px 8px}
 .ai-tag{font-weight:700;color:var(--accent)}
 .ai-tag .mock{background:#9aa6b6;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px}
 .ai-tag .real{background:#178a5a;color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px}
+.relay-card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fafbfd}
+.rc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.rc-name{font-weight:700;font-size:14px}.rc-name .code{font-weight:400;color:var(--mut);font-size:11px}
+.rc-pnl{font-weight:700;font-size:15px}
+.rc-row{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--mut)}
 .disc{margin-top:14px;color:var(--mut);font-size:12px;text-align:center;font-style:italic}
 .btn-busy{opacity:.8}
 </style></head><body><div id=report class=wrap style=display:none></div>
@@ -1005,8 +1011,11 @@ function unlockReportScroll(){
   if(rep){
     rep.style.height="auto";
     rep.style.maxHeight="none";
+    rep.style.overflow="visible";
     void rep.offsetHeight;
-    const sh=Math.max(rep.scrollHeight,rep.offsetHeight)+48;
+    const foot=document.getElementById("reportEnd");
+    const footBottom=foot?foot.getBoundingClientRect().bottom+window.scrollY+80:0;
+    const sh=Math.max(rep.scrollHeight,rep.offsetHeight,footBottom)+120;
     body.style.minHeight=sh+"px";
     html.style.minHeight=sh+"px";
   }
@@ -1043,8 +1052,10 @@ function renderReport(R){
 
   let dabpHtml="";
   if(d){const sr=g=>d.senti_stats[g]||{n:0,win_rate:0,pnl:0};const tide=sr("退潮(情绪<40)");
-    const wr=d.worst.map(t=>`<tr><td>${t.name} <span class=code>${t.code}</span></td><td>${t.board}·${t.entry}</td><td>情绪${t.senti==null?"-":t.senti}</td><td class=neg>${t.premium}%</td><td class=neg>${t.ret}%</td><td class=neg>${yuan(t.pnl)}</td></tr>`).join("");
-    const br=d.best.map(t=>`<tr><td>${t.name} <span class=code>${t.code}</span></td><td>${t.board}·${t.entry}</td><td>情绪${t.senti==null?"-":t.senti}</td><td class=pos>+${t.premium}%</td><td class=pos>+${t.ret}%</td><td class=pos>${yuan(t.pnl)}</td></tr>`).join("");
+    const mob=isMobileView();
+    const tradeCard=(t,cls,sign)=>`<div class=relay-card><div class=rc-head><span class=rc-name>${t.name} <span class=code>${t.code}</span></span><span class="${cls} rc-pnl">${sign}${yuan(t.pnl)}</span></div><div class=rc-row><span>${t.board}·${t.entry}</span><span>情绪${t.senti==null?"-":t.senti}</span><span class=${cls}>溢价${sign}${t.premium}%</span><span class=${cls}>收益${sign}${t.ret}%</span></div></div>`;
+    const wr=mob?d.worst.map(t=>tradeCard(t,"neg","")).join(""):d.worst.map(t=>`<tr><td>${t.name}<br><span class=code>${t.code}</span></td><td>${t.board}·${t.entry}</td><td>情绪${t.senti==null?"-":t.senti}</td><td class=neg>${t.premium}%</td><td class=neg>${t.ret}%</td><td class=neg>${yuan(t.pnl)}</td></tr>`).join("");
+    const br=mob?d.best.map(t=>tradeCard(t,"pos","+")).join(""):d.best.map(t=>`<tr><td>${t.name}<br><span class=code>${t.code}</span></td><td>${t.board}·${t.entry}</td><td>情绪${t.senti==null?"-":t.senti}</td><td class=pos>+${t.premium}%</td><td class=pos>+${t.ret}%</td><td class=pos>${yuan(t.pnl)}</td></tr>`).join("");
     dabpHtml=`<h2 class=sec>打板接力 · 专属画像</h2>
     <div class=charts><div class=panel><h4>连板高度 · 分项胜率</h4><p class=sub>板越高、胜率越低则高板接力缺乏正期望</p><div class="chart-box lg"><canvas id=boardChart></canvas></div></div>
       <div class=panel><h4>市场情绪周期 · 净盈亏</h4><p class=sub>退潮期 ${tide.n} 笔、胜率 ${tide.win_rate}%、${yuan(tide.pnl)}</p><div class="chart-box lg"><canvas id=sentiChart></canvas></div></div></div>
@@ -1052,8 +1063,8 @@ function renderReport(R){
       ${kpiCard("次日高开率",d.high_open_rate+"%",d.high_open_rate>=40?"pos":"neg","接力成功前提")}
       ${kpiCard("次日水下率",d.underwater_rate+"%","neg","买在情绪高点")}
       ${kpiCard("核按钮执行率",d.cut_rate+"%",d.cut_rate>=50?"pos":"neg",`水下${d.n_underwater}笔仅${d.n_cut}笔止损`)}</div>
-    <div class=charts style=margin-top:16px><div class=panel><h4 class=neg>亏损最重的接力</h4><div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${wr}</table></div></div>
-      <div class=panel><h4 class=pos>盈利最好的接力</h4><div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${br}</table></div></div></div>`;}
+    <div class=charts style=margin-top:16px><div class=panel><h4 class=neg>亏损最重的接力</h4>${mob?wr:`<div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${wr}</table></div>`}</div>
+      <div class=panel><h4 class=pos>盈利最好的接力</h4>${mob?br:`<div class=table-wrap><table><tr><th>标的</th><th>高度·方式</th><th>情绪</th><th>次日溢价</th><th>收益率</th><th>盈亏</th></tr>${br}</table></div>`}</div></div>`;}
 
   const nDiag=R.diagnoses.length,nChart=4+(d?2:0);
   $("#report").innerHTML=`
@@ -1087,6 +1098,8 @@ function renderReport(R){
   unlockReportScroll();
   setTimeout(unlockReportScroll,150);
   setTimeout(()=>{scheduleChartResize();unlockReportScroll();},400);
+  setTimeout(unlockReportScroll,1200);
+  setTimeout(unlockReportScroll,3000);
 }
 function initCharts(m,d){
   const G={neg:"#178a5a",pos:"#d83a3a",warn:"#d98a00",ac:"#2e75b6"};
