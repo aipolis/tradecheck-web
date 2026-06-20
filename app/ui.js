@@ -45,9 +45,10 @@ function postMetricsIfAllowed(R,m){
 }
 function scheduleFeedbackCard(R,m){
   if(R.isSample)return;
-  // 30 秒后浮现反馈卡(如果已提交/已关闭则跳过)
-  let submitted=false;try{submitted=localStorage.getItem("tc_fb_submitted")==="1";}catch(e){}
-  if(submitted)return;
+  // 30 天内提交过/暂不过都不再弹;过期则重新可见
+  const COOLDOWN_MS=30*24*3600*1000;
+  let lastTs=0;try{lastTs=parseInt(localStorage.getItem("tc_fb_last_ts")||"0",10)||0;}catch(e){}
+  if(lastTs&&(Date.now()-lastTs)<COOLDOWN_MS)return;
   setTimeout(()=>{
     const card=document.getElementById("fbCard");if(!card)return;
     card.style.display="block";card.style.opacity="0";
@@ -57,7 +58,10 @@ function scheduleFeedbackCard(R,m){
     stars.forEach(s=>{
       s.onclick=()=>{rating=+s.dataset.r;stars.forEach((x,i)=>x.textContent=i<rating?"★":"☆");};
     });
-    document.getElementById("fbDismiss").onclick=()=>{card.style.display="none";};
+    document.getElementById("fbDismiss").onclick=()=>{
+      try{localStorage.setItem("tc_fb_last_ts",String(Date.now()));}catch(e){}
+      card.style.display="none";
+    };
     document.getElementById("fbSubmit").onclick=()=>{
       if(!rating){alert("请先点一下星星 1-5");return;}
       const payload={
@@ -71,7 +75,7 @@ function scheduleFeedbackCard(R,m){
           body:JSON.stringify(payload),keepalive:true
         }).catch(e=>console.warn("[feedback]",e));
       }
-      try{localStorage.setItem("tc_fb_submitted","1");}catch(e){}
+      try{localStorage.setItem("tc_fb_last_ts",String(Date.now()));}catch(e){}
       document.getElementById("fbThanks").style.display="block";
       ["fbStars","fbComment","fbSubmit","fbDismiss"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
     };
