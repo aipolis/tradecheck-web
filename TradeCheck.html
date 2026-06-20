@@ -976,7 +976,9 @@ function pickDealFile(files){
 }
 function addImages(files){[...files].forEach(f=>{if(!f.type.startsWith("image/"))return;const rd=new FileReader();
   rd.onload=()=>{images.push({name:f.name,url:rd.result});renderThumbs();syncRun();};rd.readAsDataURL(f);});}
-function renderThumbs(){const w=$("#thumbs"),strip=$("#thumbStrip"),z=$("#imgZone");
+function renderThumbs(){
+  const w=$("#thumbs"),strip=$("#thumbStrip"),z=$("#imgZone");
+  if(!w||!strip||!z)return;
   w.innerHTML=images.map((im,i)=>
   `<span class=thumb title="${im.name.replace(/"/g,"&quot;")}">${i+1}<span class=x data-i=${i}>✕</span></span>`).join("");
   w.style.display=images.length?"block":"none";
@@ -987,8 +989,8 @@ function renderThumbs(){const w=$("#thumbs"),strip=$("#thumbStrip"),z=$("#imgZon
   strip.hidden=!n;
   z.classList.toggle("ok",n>0);
   z.classList.toggle("has-imgs",n>0);
-  $("#imgCount").textContent=n?`已选 ${n} 张 · 按顺序拼接 · 点击空白处继续添加`:"";}
-function syncRun(){$("#runBtn").disabled=!(fileDeal||images.length);}
+  const ic=$("#imgCount");if(ic)ic.textContent=n?`已选 ${n} 张 · 按顺序拼接 · 点击空白处继续添加`:"";}
+function syncRun(){const btn=$("#runBtn");if(btn)btn.disabled=!(fileDeal||images.length);}
 
 function bindCSV(zone,input,which){const z=$("#"+zone),inp=$("#"+input);
   z.addEventListener("click",()=>inp.click());
@@ -1009,7 +1011,7 @@ function setBusy(b,msg){
 }
 function showReportBusy(msg){
   let el=$("#reportBusy");
-  if(!el&&$("#report")){
+  if(!el&&msg&&$("#report")){
     el=document.createElement("div");el.id="reportBusy";el.className="report-busy";
     document.body.appendChild(el);
   }
@@ -1050,8 +1052,8 @@ async function run(){
     }
     if(!dealText)throw new Error("请上传交割单(CSV 或图片)，或选择样例报告。");
 
-    // 若用户没手工提供行情 CSV 且 TradeCheck 行情服务可用,自动从后端拉
-    if(!mktText&&BACKEND.tc){
+    // 样例报告已内置交割单/行情,不再自动拉行情(避免切换卡住)
+    if(!mktText&&BACKEND.tc&&!currentSampleId){
       setBusy(true,"正在从后端获取行情数据…");
       try{
         const probe=TC.parseDeals(dealText);
@@ -1095,24 +1097,31 @@ async function run(){
 function scoreClass(sc){return sc>=65?"":sc>=50?" mid":" lo";}
 function bindSamplePicker(ov){
   const list=ov.querySelector(".sample-list");
-  if(list&&!list.dataset.bound){
-    list.dataset.bound="1";
-    list.addEventListener("click",e=>{
-      const btn=e.target.closest(".sample-item");
-      if(btn&&btn.dataset.id)loadSampleReport(btn.dataset.id);
-    });
-  }
+  if(!list||list.dataset.bound)return;
+  list.dataset.bound="1";
+  list.addEventListener("click",e=>{
+    let el=e.target;
+    while(el&&el!==list){
+      if(el.classList&&el.classList.contains("sample-item")&&el.dataset.id){
+        e.preventDefault();
+        loadSampleReport(el.dataset.id);
+        return;
+      }
+      el=el.parentElement;
+    }
+  });
 }
 function showSamplePicker(){
   let ov=$("#sampleOverlay");
   if(!ov){
     ov=document.createElement("div");ov.id="sampleOverlay";ov.className="sample-overlay";ov.hidden=true;
-    ov.innerHTML=`<div class=sample-panel role=dialog aria-label=样例报告>
+    ov.innerHTML=`<div class=sample-panel role=dialog aria-label=样例报告 onclick=event.stopPropagation()>
       <div class=sample-panel-hd><h3>样例报告</h3><p>覆盖 20–90 分不同表现，每份约 200 笔完整交易。含模拟账户、真实脱敏交割单与公开打板样例。</p>
-      <button type=button class=sample-close aria-label=关闭 onclick=closeSamplePicker()>✕</button></div>
+      <button type=button class=sample-close aria-label=关闭>✕</button></div>
       <div class=sample-list></div></div>`;
     document.body.appendChild(ov);
     ov.addEventListener("click",e=>{if(e.target===ov)closeSamplePicker();});
+    ov.querySelector(".sample-close").addEventListener("click",closeSamplePicker);
     bindSamplePicker(ov);
   }
   const list=ov.querySelector(".sample-list");
@@ -1120,16 +1129,27 @@ function showSamplePicker(){
     list.innerHTML=(SAMPLE_META||[]).map(s=>`<button type=button class="sample-item${s.id===currentSampleId?" active":""}" data-id="${s.id}">
       <span class="si-score${scoreClass(s.score)}">${s.score}</span>
       <span class=si-body><b>${s.label}</b><small>${s.note} · ${s.style} · ${s.trips} 笔</small></span></button>`).join("");
+    bindSamplePicker(ov);
   }
   ov.hidden=false;
 }
 function closeSamplePicker(){const ov=$("#sampleOverlay");if(ov)ov.hidden=true;}
 async function loadSampleReport(id){
-  if(typeof SAMPLE_DEALS==="undefined"||!SAMPLE_DEALS[id])return;
+  if(typeof SAMPLE_DEALS==="undefined"||!SAMPLE_DEALS[id]){
+    console.warn("[loadSample] missing",id);
+    return;
+  }
   closeSamplePicker();
-  currentSampleId=id;fileDeal=SAMPLE_DEALS[id];fileMkt=SAMPLE_MKTS[id]||null;images=[];
-  renderThumbs();syncRun();
-  try{await run();}catch(e){console.error("[loadSample]",e);}
+  currentSampleId=id;
+  fileDeal=SAMPLE_DEALS[id];
+  fileMkt=(typeof SAMPLE_MKTS!=="undefined"&&SAMPLE_MKTS[id])?SAMPLE_MKTS[id]:null;
+  images=[];
+  renderThumbs();
+  syncRun();
+  showReportBusy("正在切换样例报告…");
+  try{await run();}
+  catch(e){console.error("[loadSample]",e);showReportBusy("切换失败，请重试");setTimeout(showReportBusy,2000);}
+  finally{showReportBusy("");}
 }
 function loadDemo(){showSamplePicker();}
 function reset(){location.reload();}
@@ -1231,7 +1251,7 @@ function renderReport(R){
   <div class=report-summary>本报告含 ${cards.length} 项核心指标 · ${nChart} 张图表${d?" · 打板专属分析":""} · ${nDiag} 条诊断，内容与电脑端一致，请向下滑动查看全部</div>
   <header class=hero><div class=meta>复盘区间 ${m.period_start} 至 ${m.period_end} · ${m.n_trades} 笔完整交易 / ${m.n_orders} 次成交 · ${R.isSample?"样例数据":"本地解析"}</div>
     <h1>交易行为诊断报告</h1><span class=idtag>● 已识别交易风格：<b>${st.label}</b> &nbsp;置信度 ${st.confidence}%</span>
-    ${sampleBadge}<button type=button class=sample-hero-btn onclick=showSamplePicker()>样例报告 ▾</button></header>
+    ${sampleBadge}<button type=button class=sample-hero-btn id=sampleHeroBtn>样例报告 ▾</button></header>
   ${sampleNote}
   <div class=idbox>📌 <b>风格识别判据</b>:${st.reasons.join(";")}。系统据此采用${d?"<b>打板接力专属标尺</b>":"对应评价标尺"}进行诊断。</div>
   <div class=scorewrap><div class=gauge><svg viewBox="0 0 200 110" width=200 height=110>
@@ -1253,6 +1273,7 @@ function renderReport(R){
   initCharts(m,d);
   scheduleChartResize();
   bindChartResize();
+  const sh=$("#sampleHeroBtn");if(sh)sh.onclick=showSamplePicker;
   unlockReportScroll();
   setTimeout(unlockReportScroll,150);
   setTimeout(()=>{scheduleChartResize();unlockReportScroll();},400);
@@ -1344,6 +1365,9 @@ document.addEventListener("DOMContentLoaded",()=>{
   bindCSV("dealZone","dealInput","deal");bindImg();
   $("#runBtn").addEventListener("click",run);
   const sb=$("#sampleBtn");if(sb)sb.addEventListener("click",showSamplePicker);
+  window.showSamplePicker=showSamplePicker;
+  window.closeSamplePicker=closeSamplePicker;
+  window.loadSampleReport=loadSampleReport;
   probeBackend();
 });
 </script></body></html>
