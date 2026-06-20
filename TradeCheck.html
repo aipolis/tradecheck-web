@@ -994,18 +994,14 @@ function enterReportView(){
   document.body.classList.add("report-mode");
   const up=$("#upload");
   if(up)up.remove();
-  const rep=$("#report");
-  rep.style.display="block";
-  rep.style.height="auto";
-  rep.style.overflow="visible";
   unlockReportScroll();
 }
 function unlockReportScroll(){
-  const html=document.documentElement,body=document.body,rep=$("#report");
-  [html,body].forEach(el=>{el.style.cssText="height:auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch"});
-  if(rep){
-    rep.style.cssText="display:block!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;position:relative";
-  }
+  const s=document.documentElement.style,b=document.body.style,r=$("#report");
+  s.height="auto";s.minHeight="0";s.maxHeight="none";s.overflowY="scroll";s.overflowX="hidden";
+  b.height="auto";b.minHeight="0";b.maxHeight="none";b.overflowY="visible";b.overflowX="hidden";
+  b.webkitOverflowScrolling="touch";b.position="relative";
+  if(r){r.style.display="block";r.style.height="auto";r.style.maxHeight="none";r.style.overflow="visible";r.style.position="relative";}
 }
 
 function kpiCard(t,v,cls,s){return `<div class=kpi><div class=t>${t}</div><div class="v ${cls}">${v}</div><div class=s>${s}</div></div>`;}
