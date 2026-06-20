@@ -477,8 +477,27 @@ TC.metrics=function(trips,deals){
   const monthly={};trips.forEach(t=>{const k=ldate(t.sell_date).slice(0,7);monthly[k]=(monthly[k]||0)+t.pnl;});
   const dailyMap={};trips.forEach(t=>{const k=ldate(t.sell_date);dailyMap[k]=(dailyMap[k]||0)+t.pnl;});
   const dailyKeys=Object.keys(dailyMap).sort();
-  let cum=0;const equity_curve=dailyKeys.map(k=>{cum+=dailyMap[k];return{date:k,cum_pnl:r2(cum)};});
-  let peak=-Infinity,maxDD=0;equity_curve.forEach(p=>{if(p.cum_pnl>peak)peak=p.cum_pnl;const dd=peak-p.cum_pnl;if(dd>maxDD)maxDD=dd;});
+  // 峰值占用资金:重放 deals 跟踪同时持仓的最大成本和(FIFO 配对)
+  const inv2={};let peakCap=0,curCap=0;
+  for(const dl of deals){
+    if(dl.side==="买入"){
+      (inv2[dl.code]=inv2[dl.code]||[]).push({qty:dl.qty,cost:dl.qty*dl.price+(dl.fee||0)});
+      curCap+=dl.qty*dl.price+(dl.fee||0);
+    }else{
+      let rem=dl.qty;
+      while(rem>0&&inv2[dl.code]&&inv2[dl.code].length){
+        const lot=inv2[dl.code][0];const take=Math.min(rem,lot.qty);
+        const portion=take/lot.qty*lot.cost;curCap-=portion;
+        lot.qty-=take;lot.cost-=portion;rem-=take;
+        if(lot.qty<=0)inv2[dl.code].shift();
+      }
+    }
+    if(curCap>peakCap)peakCap=curCap;
+  }
+  let cum=0;const equity_curve=dailyKeys.map(k=>{cum+=dailyMap[k];return{date:k,cum_pnl:r2(cum),cum_ret:peakCap>0?r2(cum/peakCap*100):0};});
+  let peak=-Infinity,maxDD=0,maxDDPct=0;equity_curve.forEach(p=>{if(p.cum_pnl>peak)peak=p.cum_pnl;const dd=peak-p.cum_pnl;if(dd>maxDD)maxDD=dd;});
+  if(peakCap>0)maxDDPct=r2(maxDD/peakCap*100);
+  const total_return_pct=peakCap>0?r2(total_pnl/peakCap*100):0;
   Object.keys(monthly).forEach(k=>monthly[k]=r2(monthly[k]));
   const buckets={"1天":0,"2-3天":0,"4-7天":0,"8-14天":0,"15天+":0};
   trips.forEach(t=>{const h=t.hold;buckets[h<=1?"1天":h<=3?"2-3天":h<=7?"4-7天":h<=14?"8-14天":"15天+"]++;});
@@ -493,7 +512,7 @@ TC.metrics=function(trips,deals){
     max_loss:r2(Math.min(...trips.map(t=>t.pnl))),max_win:r2(Math.max(...trips.map(t=>t.pnl))),
     avg_hold_win:ahw,avg_hold_loss:ahl,de_ratio:de,loss_over_10d_pct:lossOver10,
     total_cost:total_comm,turnover,cost_vs_turnover:cvt,cost_vs_grossprofit:cvg,
-    monthly,equity_curve,max_drawdown:r2(maxDD),buckets,avg_position:n?r2(sum(trips.map(t=>t.buy_amt))/n):0,score,grade};
+    monthly,equity_curve,max_drawdown:r2(maxDD),max_drawdown_pct:maxDDPct,peak_capital:r2(peakCap),total_return_pct,buckets,avg_position:n?r2(sum(trips.map(t=>t.buy_amt))/n):0,score,grade};
 };
 
 // ---------- 打板专属指标(需行情) ----------
@@ -1265,7 +1284,7 @@ function renderReport(R){
     <div class=score-txt><h2>整体评价：${m.grade}</h2><p>${R.isSample?"样例账户":""}区间净${m.total_pnl>=0?"盈利":"亏损"} ${yuan2(m.total_pnl)}。下方为按${R.isSample?"该样例":"你的"}交易风格生成的逐项诊断与整改建议,所有数字均由系统对交割单确定性计算得出。</p></div></div>
   <div class=grid>${cards.map(c=>kpiCard(...c)).join("")}</div>
   <h2 class=sec>行为画像</h2>
-  <div class=charts><div class=panel style="grid-column:1/-1"><h4>累计净盈亏曲线(元) <span style="color:var(--mut);font-size:12px;font-weight:400">· 最大回撤 ${yuan(m.max_drawdown||0)}</span></h4><div class="chart-box tall"><canvas id=equityChart></canvas></div></div></div>
+  <div class=charts><div class=panel style="grid-column:1/-1"><h4>累计净盈亏曲线 <span style="color:var(--mut);font-size:12px;font-weight:400">· 区间收益率 <b style="color:${(m.total_return_pct||0)>=0?'#d83a3a':'#178a5a'}">${(m.total_return_pct||0)>=0?'+':''}${m.total_return_pct||0}%</b> · 最大回撤 ${yuan(m.max_drawdown||0)} (${m.max_drawdown_pct||0}%) · 峰值占用资金 ${yuan(m.peak_capital||0)}</span></h4><div class="chart-box tall"><canvas id=equityChart></canvas></div></div></div>
   <div class=charts style=margin-top:16px><div class=panel><h4>持有周期分布(笔数)</h4><p class=sub>${Object.entries(m.buckets).map(([k,v])=>k+" "+v+"笔").join(" · ")}</p><div class="chart-box tall"><canvas id=holdChart></canvas></div></div>
     <div class=panel><h4>月度净盈亏(元)</h4><div class=chart-box><canvas id=monthChart></canvas></div></div></div>
   <div class=charts style=margin-top:16px><div class=panel><h4>盈利单 vs 亏损单 · 平均持有天数</h4><div class="chart-box sm"><canvas id=deChart></canvas></div></div>
@@ -1320,18 +1339,23 @@ function initCharts(m,d){
       x:{grid:{display:false},ticks:{maxRotation:mobile?40:0,font:{size:mobile?10:11}}},
       y:{grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:mobile?10:11}}}}}});
 
-  // 累计净盈亏曲线
+  // 累计净盈亏曲线(双 Y 轴:左=元,右=收益率%)
   const ec=m.equity_curve||[];
   if(ec.length){
+    const hasRet=ec.some(p=>p.cum_ret!=null);
     mk("equityChart",{type:"line",
-      data:{labels:ec.map(p=>p.date),datasets:[{data:ec.map(p=>p.cum_pnl),tension:0.25,fill:true,
+      data:{labels:ec.map(p=>p.date),datasets:[{data:ec.map(p=>p.cum_pnl),tension:0.25,fill:true,yAxisID:"y",
         pointRadius:ec.length<=20?3:0,pointHoverRadius:5,
         segment:{borderColor:ctx=>(ctx.p1.parsed.y>=0?G.pos:G.neg),
           backgroundColor:ctx=>(ctx.p1.parsed.y>=0?"rgba(216,58,58,.10)":"rgba(23,138,90,.10)")},
         borderWidth:2.2}]},
-      options:{plugins:{legend:{display:false}},scales:{
+      options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=ec[ctx.dataIndex];return ` 累计 ${(p.cum_pnl>=0?"+":"")}${Math.round(p.cum_pnl).toLocaleString()} 元 (${p.cum_ret>=0?"+":""}${p.cum_ret}%)`;}}}},scales:{
         x:{grid:{display:false},ticks:{maxRotation:mobile?40:0,autoSkip:true,maxTicksLimit:mobile?5:10,font:{size:mobile?10:11}}},
-        y:{grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:mobile?10:11}}}}}});
+        y:{position:"left",grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:mobile?10:11}},title:{display:!mobile,text:"累计盈亏(元)",font:{size:11}}},
+        y1:{position:"right",grid:{display:false},display:hasRet,
+          ticks:{callback:v=>v.toFixed(0)+"%",font:{size:mobile?10:11}},
+          title:{display:!mobile,text:"收益率",font:{size:11}},
+          min:Math.min(...ec.map(p=>p.cum_ret)),max:Math.max(...ec.map(p=>p.cum_ret))}}}});
   }
 
   // 处置效应 → 横向条形(两值对比)

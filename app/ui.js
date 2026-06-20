@@ -484,7 +484,7 @@ function renderReport(R){
     <div class=score-txt><h2>整体评价：${m.grade}</h2><p>${R.isSample?"样例账户":""}区间净${m.total_pnl>=0?"盈利":"亏损"} ${yuan2(m.total_pnl)}。下方为按${R.isSample?"该样例":"你的"}交易风格生成的逐项诊断与整改建议,所有数字均由系统对交割单确定性计算得出。</p></div></div>
   <div class=grid>${cards.map(c=>kpiCard(...c)).join("")}</div>
   <h2 class=sec>行为画像</h2>
-  <div class=charts><div class=panel style="grid-column:1/-1"><h4>累计净盈亏曲线(元) <span style="color:var(--mut);font-size:12px;font-weight:400">· 最大回撤 ${yuan(m.max_drawdown||0)}</span></h4><div class="chart-box tall"><canvas id=equityChart></canvas></div></div></div>
+  <div class=charts><div class=panel style="grid-column:1/-1"><h4>累计净盈亏曲线 <span style="color:var(--mut);font-size:12px;font-weight:400">· 区间收益率 <b style="color:${(m.total_return_pct||0)>=0?'#d83a3a':'#178a5a'}">${(m.total_return_pct||0)>=0?'+':''}${m.total_return_pct||0}%</b> · 最大回撤 ${yuan(m.max_drawdown||0)} (${m.max_drawdown_pct||0}%) · 峰值占用资金 ${yuan(m.peak_capital||0)}</span></h4><div class="chart-box tall"><canvas id=equityChart></canvas></div></div></div>
   <div class=charts style=margin-top:16px><div class=panel><h4>持有周期分布(笔数)</h4><p class=sub>${Object.entries(m.buckets).map(([k,v])=>k+" "+v+"笔").join(" · ")}</p><div class="chart-box tall"><canvas id=holdChart></canvas></div></div>
     <div class=panel><h4>月度净盈亏(元)</h4><div class=chart-box><canvas id=monthChart></canvas></div></div></div>
   <div class=charts style=margin-top:16px><div class=panel><h4>盈利单 vs 亏损单 · 平均持有天数</h4><div class="chart-box sm"><canvas id=deChart></canvas></div></div>
@@ -539,18 +539,23 @@ function initCharts(m,d){
       x:{grid:{display:false},ticks:{maxRotation:mobile?40:0,font:{size:mobile?10:11}}},
       y:{grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:mobile?10:11}}}}}});
 
-  // 累计净盈亏曲线
+  // 累计净盈亏曲线(双 Y 轴:左=元,右=收益率%)
   const ec=m.equity_curve||[];
   if(ec.length){
+    const hasRet=ec.some(p=>p.cum_ret!=null);
     mk("equityChart",{type:"line",
-      data:{labels:ec.map(p=>p.date),datasets:[{data:ec.map(p=>p.cum_pnl),tension:0.25,fill:true,
+      data:{labels:ec.map(p=>p.date),datasets:[{data:ec.map(p=>p.cum_pnl),tension:0.25,fill:true,yAxisID:"y",
         pointRadius:ec.length<=20?3:0,pointHoverRadius:5,
         segment:{borderColor:ctx=>(ctx.p1.parsed.y>=0?G.pos:G.neg),
           backgroundColor:ctx=>(ctx.p1.parsed.y>=0?"rgba(216,58,58,.10)":"rgba(23,138,90,.10)")},
         borderWidth:2.2}]},
-      options:{plugins:{legend:{display:false}},scales:{
+      options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=ec[ctx.dataIndex];return ` 累计 ${(p.cum_pnl>=0?"+":"")}${Math.round(p.cum_pnl).toLocaleString()} 元 (${p.cum_ret>=0?"+":""}${p.cum_ret}%)`;}}}},scales:{
         x:{grid:{display:false},ticks:{maxRotation:mobile?40:0,autoSkip:true,maxTicksLimit:mobile?5:10,font:{size:mobile?10:11}}},
-        y:{grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:mobile?10:11}}}}}});
+        y:{position:"left",grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:mobile?10:11}},title:{display:!mobile,text:"累计盈亏(元)",font:{size:11}}},
+        y1:{position:"right",grid:{display:false},display:hasRet,
+          ticks:{callback:v=>v.toFixed(0)+"%",font:{size:mobile?10:11}},
+          title:{display:!mobile,text:"收益率",font:{size:11}},
+          min:Math.min(...ec.map(p=>p.cum_ret)),max:Math.max(...ec.map(p=>p.cum_ret))}}}});
   }
 
   // 处置效应 → 横向条形(两值对比)
