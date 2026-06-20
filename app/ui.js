@@ -553,7 +553,6 @@ function renderReport(R){
 
   const nDiag=R.diagnoses.length,nChart=4+(d?2:0);
   const sm=R.sampleMeta;
-  const sampleBadge=sm?`<span class=sample-tag-br>样例 · ${sm.score}分</span>`:"";
   const sampleNote=sm?`<p class=sample-note>本页为<b>${sm.label}</b>（${sm.note}），仅供了解不同分数段报告形态，非你的真实账户。</p>`:"";
   $("#report").innerHTML=`
   <div class=topbar><div class=brand><span class=dot></span>TradeCheck · 交易诊断助手</div>
@@ -561,9 +560,9 @@ function renderReport(R){
     <button class=btn-ghost onclick=window.print()>打印 / 导出PDF</button>
     <button class=btn-ghost onclick=reset()>重新上传</button></div></div>
   <div class=report-summary>本报告含 ${cards.length} 项核心指标 · ${nChart} 张图表${d?" · 打板专属分析":""} · ${nDiag} 条诊断，内容与电脑端一致，请向下滑动查看全部</div>
-  <header class=hero><div class=meta>复盘区间 ${m.period_start} 至 ${m.period_end} · ${m.n_trades} 笔完整交易 / ${m.n_orders} 次成交 · ${R.isSample?"样例数据":"本地解析"}</div>
-    <h1>交易行为诊断报告</h1><span class=idtag>● 已识别交易风格：<b>${st.label}</b> &nbsp;置信度 ${st.confidence}%</span>
-    ${sampleBadge}<button type=button class=sample-hero-btn id=sampleHeroBtn>样例报告 ▾</button></header>
+  <header class=hero><button type=button class=sample-hero-btn id=sampleHeroBtn>样例报告 ▾</button>
+    <div class=meta>复盘区间 ${m.period_start} 至 ${m.period_end} · ${m.n_trades} 笔完整交易 / ${m.n_orders} 次成交 · ${R.isSample?"样例数据":"本地解析"}</div>
+    <h1>交易行为诊断报告</h1><span class=idtag>● 已识别交易风格：<b>${st.label}</b> &nbsp;置信度 ${st.confidence}%</span></header>
   ${sampleNote}
   <div class=idbox>📌 <b>风格识别判据</b>:${st.reasons.join(";")}。系统据此采用${d?"<b>打板接力专属标尺</b>":"对应评价标尺"}进行诊断。</div>
   <div class=scorewrap><div class=gauge><svg viewBox="0 0 200 110" width=200 height=110>
