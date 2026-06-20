@@ -182,6 +182,10 @@ TC.metrics=function(trips,deals){
   const turnover=r2(sum(deals.map(d=>d.price*d.qty)));
   const cvt=turnover?r2(total_comm/turnover*100):0,cvg=gross_profit?r2(total_comm/gross_profit*100):0;
   const monthly={};trips.forEach(t=>{const k=ldate(t.sell_date).slice(0,7);monthly[k]=(monthly[k]||0)+t.pnl;});
+  const dailyMap={};trips.forEach(t=>{const k=ldate(t.sell_date);dailyMap[k]=(dailyMap[k]||0)+t.pnl;});
+  const dailyKeys=Object.keys(dailyMap).sort();
+  let cum=0;const equity_curve=dailyKeys.map(k=>{cum+=dailyMap[k];return{date:k,cum_pnl:r2(cum)};});
+  let peak=-Infinity,maxDD=0;equity_curve.forEach(p=>{if(p.cum_pnl>peak)peak=p.cum_pnl;const dd=peak-p.cum_pnl;if(dd>maxDD)maxDD=dd;});
   Object.keys(monthly).forEach(k=>monthly[k]=r2(monthly[k]));
   const buckets={"1天":0,"2-3天":0,"4-7天":0,"8-14天":0,"15天+":0};
   trips.forEach(t=>{const h=t.hold;buckets[h<=1?"1天":h<=3?"2-3天":h<=7?"4-7天":h<=14?"8-14天":"15天+"]++;});
@@ -196,7 +200,7 @@ TC.metrics=function(trips,deals){
     max_loss:r2(Math.min(...trips.map(t=>t.pnl))),max_win:r2(Math.max(...trips.map(t=>t.pnl))),
     avg_hold_win:ahw,avg_hold_loss:ahl,de_ratio:de,loss_over_10d_pct:lossOver10,
     total_cost:total_comm,turnover,cost_vs_turnover:cvt,cost_vs_grossprofit:cvg,
-    monthly,buckets,avg_position:n?r2(sum(trips.map(t=>t.buy_amt))/n):0,score,grade};
+    monthly,equity_curve,max_drawdown:r2(maxDD),buckets,avg_position:n?r2(sum(trips.map(t=>t.buy_amt))/n):0,score,grade};
 };
 
 // ---------- 打板专属指标(需行情) ----------

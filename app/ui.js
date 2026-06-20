@@ -488,6 +488,7 @@ function renderReport(R){
     <div class=panel><h4>月度净盈亏(元)</h4><div class=chart-box><canvas id=monthChart></canvas></div></div></div>
   <div class=charts style=margin-top:16px><div class=panel><h4>盈利单 vs 亏损单 · 平均持有天数</h4><div class="chart-box sm"><canvas id=deChart></canvas></div></div>
     <div class=panel><h4>盈亏金额结构(元)</h4><div class="chart-box tall"><canvas id=pnlChart></canvas></div></div></div>
+  <div class=charts style=margin-top:16px><div class=panel style="grid-column:1/-1"><h4>累计净盈亏曲线(元) <span style="color:var(--mut);font-size:12px;font-weight:400">· 最大回撤 ${yuan(m.max_drawdown||0)}</span></h4><div class="chart-box tall"><canvas id=equityChart></canvas></div></div></div>
   ${dabpHtml}
   <h2 class=sec>问题诊断与整改建议</h2>${aiHtml}${probHtml}
   <h2 class=sec>整改清单(可逐项打勾)</h2><div class=checklist>${checkHtml}</div>
@@ -537,6 +538,20 @@ function initCharts(m,d){
     options:{plugins:{legend:{display:false}},scales:{
       x:{grid:{display:false},ticks:{maxRotation:mobile?40:0,font:{size:mobile?10:11}}},
       y:{grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:mobile?10:11}}}}}});
+
+  // 累计净盈亏曲线
+  const ec=m.equity_curve||[];
+  if(ec.length){
+    mk("equityChart",{type:"line",
+      data:{labels:ec.map(p=>p.date),datasets:[{data:ec.map(p=>p.cum_pnl),tension:0.25,fill:true,
+        pointRadius:ec.length<=20?3:0,pointHoverRadius:5,
+        segment:{borderColor:ctx=>(ctx.p1.parsed.y>=0?G.pos:G.neg),
+          backgroundColor:ctx=>(ctx.p1.parsed.y>=0?"rgba(216,58,58,.10)":"rgba(23,138,90,.10)")},
+        borderWidth:2.2}]},
+      options:{plugins:{legend:{display:false}},scales:{
+        x:{grid:{display:false},ticks:{maxRotation:mobile?40:0,autoSkip:true,maxTicksLimit:mobile?5:10,font:{size:mobile?10:11}}},
+        y:{grid:{color:"#eef2f7"},ticks:{callback:fmtMoney,font:{size:mobile?10:11}}}}}});
+  }
 
   // 处置效应 → 横向条形(两值对比)
   mk("deChart",{type:"bar",
