@@ -920,13 +920,14 @@ function fetchTimeout(url,ms){
   return fetch(url,{cache:"no-store",signal:ctrl.signal}).finally(()=>clearTimeout(t));
 }
 
-async function probeBackend(){
+async function probeBackend(opts){
+  // 云托管冷启动可能要 5-10 秒,默认 10s;首屏渲染时如果 4s 内没回就先标"检测中",后续探测覆盖
+  const timeoutMs=(opts&&opts.timeoutMs)||10000;
   const el=$("#beStatus");
   try{
-    // 并行探测,避免串行等待拖长「检测后端中…」
     const [mainRes,tcRes]=await Promise.allSettled([
-      fetchTimeout(apiURL("/api/health"),4000).then(async r=>r.ok?r.json():null).catch(()=>null),
-      fetchTimeout(apiURL("/api/tradecheck/health"),4000).then(async r=>r.ok?r.json():null).catch(()=>null),
+      fetchTimeout(apiURL("/api/health"),timeoutMs).then(async r=>r.ok?r.json():null).catch(()=>null),
+      fetchTimeout(apiURL("/api/tradecheck/health"),timeoutMs).then(async r=>r.ok?r.json():null).catch(()=>null),
     ]);
     if(mainRes.status==="fulfilled"&&mainRes.value){
       const j=mainRes.value;
@@ -947,9 +948,16 @@ async function probeBackend(){
     el.innerHTML="● 后端就绪 — "+caps.join(" · ");
     el.className="be on";
   }else{
-    el.innerHTML="○ 离线模式 — 仅本地规则诊断可用";
+    el.innerHTML="○ 后端唤醒中 — 点击「生成诊断报告」时会自动重试";
     el.className="be off";
   }
+}
+
+async function ensureBackendReady(){
+  // 用户点上传前若 BACKEND.tc 还没就绪,先重试一次(可能是首次进页时云托管冷启动)
+  if(BACKEND.tc)return true;
+  await probeBackend({timeoutMs:15000});
+  return BACKEND.tc;
 }
 
 const OCR_BATCH_SIZE=3; // 每批 3 张,绕开云托管网关单次请求超时/限流
@@ -1155,10 +1163,17 @@ async function run(){
     if(!dealText&&images.length){
       // 公网部署:优先分批 OCR(/ocr) + 单次 LLM(/parse_csv),绕开网关超时
       // 回退:旧版一体 /api/tradecheck/extract_csv;本地开发:/api/extract(视觉模型)
-      const useBatchOcr=BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.ocr&&BACKEND.tcCaps.parse_csv;
-      const useTcOcr=useBatchOcr||(BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv);
+      let useBatchOcr=BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.ocr&&BACKEND.tcCaps.parse_csv;
+      let useTcOcr=useBatchOcr||(BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv);
       if(!useTcOcr&&!BACKEND.ok){
-        throw new Error("图片识别需要后端:管理员请在 mrdk 容器里配置 DEEPSEEK_API_KEY 或 ZHIPU_API_KEY,或改用 CSV 交割单上传。");
+        // 可能首屏探测因冷启动超时, 用户准备上传时再唤醒后端一次
+        setBusy(true,"正在唤醒后端服务(首次访问可能需要 10-15 秒)…");
+        await ensureBackendReady();
+        useBatchOcr=BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.ocr&&BACKEND.tcCaps.parse_csv;
+        useTcOcr=useBatchOcr||(BACKEND.tc&&BACKEND.tcCaps&&BACKEND.tcCaps.extract_csv);
+      }
+      if(!useTcOcr&&!BACKEND.ok){
+        throw new Error("后端未响应。可能是云托管冷启动失败,稍后重试;或改用 CSV/Excel 交割单上传(不需要后端 OCR)。");
       }
       const urls=images.map(i=>i.url);
       let j;
